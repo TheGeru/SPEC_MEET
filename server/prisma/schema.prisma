@@ -1,0 +1,75 @@
+// configuracion de la conexion a la base de datos y el esquema de datos
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// GENERAR CLIENTE PARA USARLO EN EL CODIGO TS DEL CLIENT
+generator client {
+    provider = "prisma-client-js"
+}
+
+// ------------------------MODELOS DE DATOS (LAS TABLAS)-----------------
+
+model User {
+  id String @id @default(uuid()) //GENERAMOS UN ID UNICA PARA CADA USUARIO
+  email String @unique
+  password String
+  name String
+  role String @default("CLIENT") //"ADMIN" O "CLIENT"
+  createdAt DateTime @default(now())
+
+  //RELACION: UN USUARIO PUEDE TENER MUCHAS RESERVAS
+
+  reservation Reservation[]
+}
+
+model Room {
+  id String @id @default(uuid())
+  name String
+  wifi_ssid String
+  wifi_pass String
+  price_per_hour Decimal
+
+  //Relacion : una sala tiene muchas reservas a diferente hora y fecha
+  reservations Reservation[]
+}
+
+model Reservation {
+  id String @id @default(uuid())
+
+  //claves Foraneos (relaciones)
+  userId String
+  roomId String
+
+  //conexiones
+  user User @relation(fields: [userId], references: [id])
+  room Room @relation(fields: [roomId], references: [id])
+  paymment Payment? // Relacion 1:1 
+
+  //Datos de la reserva
+  start_time DateTime
+  end_time DateTime
+  access_code String?
+  total_paid Decimal
+  status String @default("PENDING") //PENDING, PAID, CANCELLED, COMPLETED
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id String @id @default(uuid())
+  
+  //Relacion 1:1 con reserva
+  reservationId String @unique
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+
+  //Datos del pago
+  amount Decimal
+  provider_id String
+  status String
+  iva_breakdown String
+  createdAt DateTime @default(now())
+
+}
