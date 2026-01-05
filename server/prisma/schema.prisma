@@ -33,7 +33,11 @@ model Room {
   wifi_pass String
   price_per_hour Decimal
 
-  //Relacion : una sala tiene muchas reservas a diferente hora y fecha
+  status String @default("INACTIVO")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+    //Relacion : una sala tiene muchas reservas a diferente hora y fecha
   reservations Reservation[]
 }
 
