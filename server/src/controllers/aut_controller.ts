@@ -24,7 +24,7 @@ export const register = async (req: Request, res: Response) : Promise<void> =>{
         if (existingUser) {
             res.status(409).json({error: "El correo ya se esta usando en otra cuenta"});
             return;
-        }
+        } 
 
         const hashedPassword = await bcrypt.hash(password, 10);
 

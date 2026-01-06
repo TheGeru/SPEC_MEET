@@ -2,6 +2,7 @@ import express, {Application} from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import authRoutes from './routes/auth_routes';
+import routerRoom from './routes/room_routes';
 
 const app: Application = express();
 
@@ -15,4 +16,5 @@ app.get('/', (req, res)=>{
     res.send('API de SPEC.MEET funcionando y segura');
 });
 
+app.use('/api/rooms', routerRoom)
 export default app;
