@@ -86,8 +86,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
             token,
             user: {
                 id: user.id,
-                email: user.id,
+                email: user.email,
                 name: user.name,
+                role: user.role,
             }
         });
     } catch(error){
