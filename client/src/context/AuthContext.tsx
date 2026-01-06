@@ -1,18 +1,22 @@
 import React, { useEffect, useState, createContext, useContext } from 'react';
-type User = {
+import api from '../api/axios';
+
+interface User {
   id: string;
   name: string;
   email: string;
-  isAdmin: boolean;
+  role:'ADMIN' | 'CLIENT';
+  token?: string;
 };
-type AuthContextType = {
+
+interface AuthContextType {
   user: User | null;
-  isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  isLoading: boolean;
   isAuthenticated: boolean;
-  isAdmin: boolean;
+  isAdmin: boolean;         
 };
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{
@@ -30,46 +34,35 @@ export const AuthProvider: React.FC<{
     }
     setIsLoading(false);
   }, []);
-  // Mock login function
+  // Login function connected to backend
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // This would be an API call in a real application
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // Mock user data
-      const mockUser = {
-        id: '1',
-        name: email.split('@')[0],
-        email,
-        isAdmin: email.includes('admin')
+      const response = await api.post('/auth/login', { email, password });
+      const { token, user: userData } = response.data;
+      const fullUser: User = {
+        ...userData,
+        token
       };
-      setUser(mockUser);
-      localStorage.setItem('specMeetUser', JSON.stringify(mockUser));
-    } catch (error) {
-      console.error('Login failed:', error);
-      throw error;
+      setUser(fullUser);
+      localStorage.setItem('specMeetUser', JSON.stringify(fullUser));
+    } catch (error: any) {
+      const message = error.response?.data?.error || 'Credenciales inválidas o error de conexión';
+      throw new Error(message);
     } finally {
       setIsLoading(false);
     }
   };
-  // Mock register function
+  // Register function connected to backend
   const register = async (name: string, email: string, password: string) => {
     setIsLoading(true);
     try {
-      // This would be an API call in a real application
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // Mock user data
-      const mockUser = {
-        id: '1',
-        name,
-        email,
-        isAdmin: false
-      };
-      setUser(mockUser);
-      localStorage.setItem('specMeetUser', JSON.stringify(mockUser));
-    } catch (error) {
-      console.error('Registration failed:', error);
-      throw error;
+      // API called to register the user
+      await api.post('/auth/register', { name, email, password });
+      await login(email, password);
+    } catch (error: any) {
+      const message = error.response?.data?.error || 'Error al registrar el usuario';
+      throw new Error(message);
     } finally {
       setIsLoading(false);
     }
@@ -78,17 +71,26 @@ export const AuthProvider: React.FC<{
     setUser(null);
     localStorage.removeItem('specMeetUser');
   };
+
+  // Context value
   const value = {
     user,
-    isLoading,
     login,
     register,
     logout,
+    isLoading,
     isAuthenticated: !!user,
-    isAdmin: user?.isAdmin || false
+    isAdmin: user?.role === 'ADMIN'
   };
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+
+
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
