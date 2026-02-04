@@ -41,93 +41,161 @@ const RegisterPage: React.FC = () => {
     setShowPlansModal(false);
     navigate('/dashboard');
   };
-  return <div className="flex min-h-[80vh] items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md">
-        <div className="bg-zinc-900 rounded-lg shadow-lg p-8">
+  return <div className="relative min-h-screen w-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div 
+      className="absolute inset-0 z-0" 
+      style={{
+        backgroundImage: "url('https://uploadthingy.s3.us-west-1.amazonaws.com/mnx4A3B36Dy2nyF5i8QPC8/PHOTO-2025-02-03-12-44-43.jpg')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center center',
+      }}
+    >
+      
+    </div>
+      <div className="relative z-10 w-full max-w-md ">
+        <div className="bg-white/5 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl p-8">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-white">Crear Cuenta</h2>
-            <p className="mt-2 text-gray-400">
-              Regístrate para comenzar a reservar tu sala de juntas
-            </p>
           </div>
-          {error && <div className="bg-red-900/30 border border-red-500 text-red-300 px-4 py-3 rounded mb-6">
+          
+          {error && (
+            <div className="bg-red-900/30 border border-red-500 text-red-300 px-4 py-3 rounded-lg mb-6">
               {error}
-            </div>}
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="name" className="block text-sm font-medium text-white/90 mb-1">
                 Nombre Completo
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <UserIcon className="h-5 w-5 text-gray-500" />
+                  <UserIcon className="h-5 w-5 text-white/40" />
                 </div>
-                <input id="name" name="name" type="text" autoComplete="name" required value={name} onChange={e => setName(e.target.value)} className="appearance-none block w-full pl-10 pr-3 py-2 border border-zinc-700 rounded-md shadow-sm bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500" placeholder="Juan Pérez" />
+                <input 
+                  id="name" 
+                  name="name" 
+                  type="text" 
+                  autoComplete="name" 
+                  required 
+                  value={name} 
+                  onChange={e => setName(e.target.value)} 
+                  className="appearance-none block w-full pl-10 pr-3 py-3 border border-white/10 rounded-xl shadow-sm bg-black/30 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/30 transition-all" 
+                  placeholder="Juan Pérez" 
+                />
               </div>
             </div>
+
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-white/90 mb-1">
                 Correo Electrónico
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <AtSignIcon className="h-5 w-5 text-gray-500" />
+                  <AtSignIcon className="h-5 w-5 text-white/40" />
                 </div>
-                <input id="email" name="email" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} className="appearance-none block w-full pl-10 pr-3 py-2 border border-zinc-700 rounded-md shadow-sm bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500" placeholder="correo@ejemplo.com" />
+                <input 
+                  id="email" 
+                  name="email" 
+                  type="email" 
+                  autoComplete="email" 
+                  required 
+                  value={email} 
+                  onChange={e => setEmail(e.target.value)} 
+                  className="appearance-none block w-full pl-10 pr-3 py-3 border border-white/10 rounded-xl shadow-sm bg-black/30 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/30 transition-all" 
+                  placeholder="correo@ejemplo.com" 
+                />
               </div>
             </div>
+
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-white/90 mb-1">
                 Contraseña
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <LockIcon className="h-5 w-5 text-gray-500" />
+                  <LockIcon className="h-5 w-5 text-white/40" />
                 </div>
-                <input id="password" name="password" type="password" autoComplete="new-password" required value={password} onChange={e => setPassword(e.target.value)} className="appearance-none block w-full pl-10 pr-3 py-2 border border-zinc-700 rounded-md shadow-sm bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500" placeholder="••••••••" />
+                <input 
+                  id="password" 
+                  name="password" 
+                  type="password" 
+                  autoComplete="new-password" 
+                  required 
+                  value={password} 
+                  onChange={e => setPassword(e.target.value)} 
+                  className="appearance-none block w-full pl-10 pr-3 py-3 border border-white/10 rounded-xl shadow-sm bg-black/30 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/30 transition-all" 
+                  placeholder="••••••••" 
+                />
               </div>
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-white/50">
                 Mínimo 8 caracteres con letras y números
               </p>
             </div>
+
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-white/90 mb-1">
                 Confirmar Contraseña
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <CheckIcon className="h-5 w-5 text-gray-500" />
+                  <CheckIcon className="h-5 w-5 text-white/40" />
                 </div>
-                <input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="appearance-none block w-full pl-10 pr-3 py-2 border border-zinc-700 rounded-md shadow-sm bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500" placeholder="••••••••" />
+                <input 
+                  id="confirmPassword" 
+                  name="confirmPassword" 
+                  type="password" 
+                  autoComplete="new-password" 
+                  required 
+                  value={confirmPassword} 
+                  onChange={e => setConfirmPassword(e.target.value)} 
+                  className="appearance-none block w-full pl-10 pr-3 py-3 border border-white/10 rounded-xl shadow-sm bg-black/30 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/30 transition-all" 
+                  placeholder="••••••••" 
+                />
               </div>
             </div>
+
             <div className="flex items-start">
               <div className="flex items-center h-5">
-                <input id="terms" name="terms" type="checkbox" checked={acceptTerms} onChange={e => setAcceptTerms(e.target.checked)} className="h-4 w-4 text-gray-600 focus:ring-gray-500 border-zinc-700 rounded bg-zinc-800" />
+                <input 
+                  id="terms" 
+                  name="terms" 
+                  type="checkbox" 
+                  checked={acceptTerms} 
+                  onChange={e => setAcceptTerms(e.target.checked)} 
+                  className="h-4 w-4 rounded border-white/20 bg-black/30 text-blue-400 focus:ring-2 focus:ring-white/30 focus:ring-offset-0 cursor-pointer" 
+                />
               </div>
               <div className="ml-3 text-sm">
-                <label htmlFor="terms" className="text-gray-400">
+                <label htmlFor="terms" className="text-white/70 leading-relaxed cursor-pointer">
                   Acepto los{' '}
-                  <Link to="#" className="font-medium text-gray-400 hover:text-gray-300">
+                  <Link to="#" className="font-medium text-gray-400 hover:text-gray-200 underline underline-offset-2 transition-colors">
                     Términos y Condiciones
                   </Link>{' '}
                   y la{' '}
-                  <Link to="#" className="font-medium text-gray-400 hover:text-gray-300">
+                  <Link to="#" className="font-medium text-gray-400 hover:text-gray-200 underline underline-offset-2 transition-colors">
                     Política de Privacidad
                   </Link>
                 </label>
               </div>
             </div>
+
             <div>
-              <button type="submit" disabled={isLoading} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed">
+              <button 
+                type="submit" 
+                disabled={isLoading} 
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 {isLoading ? 'Creando cuenta...' : 'Registrarme'}
               </button>
             </div>
           </form>
+
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-white/70">
               ¿Ya tienes una cuenta?{' '}
-              <Link to="/login" className="font-medium text-gray-400 hover:text-gray-300">
+              <Link to="/login" className="font-semibold text-gray-400 hover:text-gray-300 transition-colors">
                 Inicia sesión
               </Link>
             </p>

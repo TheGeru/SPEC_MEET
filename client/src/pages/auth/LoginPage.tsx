@@ -16,20 +16,35 @@ const LoginPage: React.FC = () => {
     setError('');
     setIsLoading(true);
     try {
-      await login(email, password);
-      navigate('/dashboard');
+    await login(email, password);
+    const savedUser = JSON.parse(localStorage.getItem('specMeetUser') || '{}');
+
+    if (savedUser.role === 'ADMIN') {
+      navigate('/admin'); // Redirige al Panel de Admin
+    } else {
+      navigate('/dashboard'); // Redirige al Dashboard de Cliente
+    }
     } catch (error) {
       setError('Credenciales inválidas. Por favor intenta de nuevo.');
     } finally {
       setIsLoading(false);
     }
   };
-  return <div className="flex min-h-[80vh] items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md">
-        <div className="bg-zinc-900 rounded-lg shadow-lg p-8">
+  return <div className="relative min-h-screen w-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div 
+      className="absolute inset-0 bg-cover bg-center z-0" 
+      style={{
+        backgroundImage: "url('https://uploadthingy.s3.us-west-1.amazonaws.com/mnx4A3B36Dy2nyF5i8QPC8/PHOTO-2025-02-03-12-44-43.jpg')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center center'
+      }}
+    >
+    </div>
+      <div className="relative z-10 w-full max-w-md ">
+        <div className="bg-white/5 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl p-8">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-white">Iniciar Sesión</h2>
-            <p className="mt-2 text-gray-400">
+            <p className="mt-2 text-white/80">
               Accede a tu cuenta para gestionar tus reservas
             </p>
           </div>
@@ -38,31 +53,31 @@ const LoginPage: React.FC = () => {
             </div>}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-white/90 mb-1">
                 Correo Electrónico
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <AtSignIcon className="h-5 w-5 text-gray-500" />
+                  <AtSignIcon className="h-5 w-5 text-white/40" />
                 </div>
-                <input id="email" name="email" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} className="appearance-none block w-full pl-10 pr-3 py-2 border border-zinc-700 rounded-md shadow-sm bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500" placeholder="correo@ejemplo.com" />
+                <input id="email" name="email" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} className="appearance-none block w-full pl-10 pr-3 py-2 border   border-white/10 rounded-xl shadow-sm bg-black/30 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/30 transition-all" placeholder="correo@ejemplo.com" />
               </div>
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-white/90 mb-1">
                 Contraseña
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <LockIcon className="h-5 w-5 text-gray-500" />
+                  <LockIcon className="h-5 w-5 text-white/40" />
                 </div>
-                <input id="password" name="password" type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} className="appearance-none block w-full pl-10 pr-3 py-2 border border-zinc-700 rounded-md shadow-sm bg-zinc-800 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500" placeholder="••••••••" />
+                <input id="password" name="password" type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} className="appearance-none block w-full pl-10 pr-3 py-2 border border-white/10 rounded-xl shadow-sm bg-black/30 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/30 transition-all" placeholder="••••••••" />
               </div>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 text-gray-600 focus:ring-gray-500 border-zinc-700 rounded bg-zinc-800" />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-400">
+                <input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 border-white/20 bg-black/30 text-gray-500 focus:ring-2 focus:ring-white/30 focus:ring-offset-0 cursor-pointer" />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-400 cursor-pointer">
                   Recordarme
                 </label>
               </div>

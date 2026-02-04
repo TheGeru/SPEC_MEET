@@ -36,23 +36,22 @@ export const AuthProvider: React.FC<{
   }, []);
   // Login function connected to backend
   const login = async (email: string, password: string) => {
-    setIsLoading(true);
-    try {
-      const response = await api.post('/auth/login', { email, password });
-      const { token, user: userData } = response.data;
-      const fullUser: User = {
-        ...userData,
-        token
-      };
-      setUser(fullUser);
-      localStorage.setItem('specMeetUser', JSON.stringify(fullUser));
-    } catch (error: any) {
-      const message = error.response?.data?.error || 'Credenciales inválidas o error de conexión';
-      throw new Error(message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  setIsLoading(true);
+  try {
+    const response = await api.post('/auth/login', { email, password });
+    const { token, user: userData } = response.data;
+    
+    const fullUser = { ...userData, token };
+    setUser(fullUser);
+    localStorage.setItem('specMeetUser', JSON.stringify(fullUser));
+    
+    return fullUser; // <--- Agrega este return
+  } catch (error: any) {
+    throw new Error(error.response?.data?.error || 'Credenciales inválidas');
+  } finally {
+    setIsLoading(false);
+  }
+};
   // Register function connected to backend
   const register = async (name: string, email: string, password: string) => {
     setIsLoading(true);
