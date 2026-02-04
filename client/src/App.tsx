@@ -14,6 +14,7 @@ import AdminCalendar from './pages/admin/AdminCalendar';
 import FeaturesPage from './pages/FeaturesPage';
 import GalleryPage from './pages/GalleryPage';
 import PlansPage from './pages/PlansPage';
+import TCPage from './pages/TCPage';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
@@ -38,6 +39,9 @@ export function App() {
               </Layout>} />
           <Route path="/register" element={<Layout>
                 <RegisterPage />
+              </Layout>} />
+          <Route path="/terms-and-conditions" element={<Layout>
+                <TCPage />
               </Layout>} />
           {/* Protected User Routes */}
           <Route path="/dashboard" element={<ProtectedRoute>
