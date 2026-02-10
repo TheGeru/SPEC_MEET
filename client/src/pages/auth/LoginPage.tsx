@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { AtSignIcon, LockIcon, ArrowRightIcon } from 'lucide-react';
+import { AxiosError } from 'axios';
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,7 +26,11 @@ const LoginPage: React.FC = () => {
       navigate('/dashboard'); // Redirige al Dashboard de Cliente
     }
     } catch (error) {
-      setError('Credenciales inválidas. Por favor intenta de nuevo.');
+      if (error instanceof AxiosError){
+        setError(error.message);
+      } else {
+        setError('Ah ocurrido un error inesperado');
+      }
     } finally {
       setIsLoading(false);
     }

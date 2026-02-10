@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { UserIcon, AtSignIcon, LockIcon, CheckIcon } from 'lucide-react';
 import PlansModal from '../../components/plans/PlansModal';
+import { AxiosError } from 'axios';
 const RegisterPage: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -32,7 +33,11 @@ const RegisterPage: React.FC = () => {
       await register(name, email, password);
       setShowPlansModal(true); // Show plans modal after successful registration
     } catch (error) {
-      setError('Error al crear la cuenta. Por favor intenta de nuevo.');
+      if (error instanceof AxiosError){
+        setError(error.message);
+      } else {
+        setError('Ocurrio un error inesperado al registar al usuario')
+      }
     } finally {
       setIsLoading(false);
     }
