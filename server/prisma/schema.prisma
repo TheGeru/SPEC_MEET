@@ -86,24 +86,3 @@ model Payment {
 
 }
 
-model SystemSetting{
-  id String @id @default(uuid())
-  key String @unique
-  value String
-  description String?
-  dataType String @default("TEXT")
-
-  updatedAt DateTime @updatedAt
-}
-
-model TermsHistory {
-  id String @id @default(uuid())
-
-  version String
-  content String
-
-  activeFrom DateTime @default(now())
-  activeUntil DateTime?
-
-  createdAt DateTime @default(now())
-}

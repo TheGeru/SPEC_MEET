@@ -1,205 +1,128 @@
-import React, { useState, useEffect } from 'react';
+import api from '../api/axios'; // Tu instancia de axios configurada
 import { Loader2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { type PricingSettings,type LocationSettings, type TermsSettings } from '../api/settings.api';
 
-interface TermsData {
-  template: string;
-  additionalClauses: string;
-  privacyOptions: {
-    collectEmail: boolean;
-    shareData: boolean;
-    cctvNotice: boolean;
-    cookieConsent: boolean;
-  };
-}
-
-// API to fetch terms - replace with your actual endpoint
-const api = {
-  async fetchTerms(): Promise<TermsData> {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    return {
-      template: `1. **Aceptación del Servicio** Al realizar una reserva o acceder a nuestras instalaciones, confirmas que has leído y aceptado estos términos. El servicio consiste en el uso temporal de la sala de juntas y sus amenidades exclusivas durante el periodo contratado.
-
-2. **Reservas y Pagos**
-   **Confirmación:** Tu reserva solo se considera confirmada una vez que el pago ha sido acreditado en su totalidad.
-   
-   **Tarifas:** Los precios vigentes, impuestos y cargos adicionales son los mostrados en la plataforma al momento de reservar. .MEET puede ajustar los precios futuros sin previo aviso, respetando siempre las reservas que ya hayan sido pagadas.
-   
-   **Horarios:** La duración, tolerancia y bloques de tiempo se rigen estrictamente por lo seleccionado en tu reserva.
-
-3. **Cancelaciones y "No Show"** Las políticas de reembolso y tiempos límite para cancelar son las publicadas en nuestra plataforma al momento de tu compra. Si no te presentas a tu reserva (No Show) sin haber cancelado en tiempo y forma, perderás el monto total pagado sin derecho a reembolso.
-
-4. **Acceso y Seguridad**
-   **Código Personal:** El acceso a la sala es mediante un código digital temporal. Este código es personal e intransferible. Tú eres el único responsable del uso que se le dé a dicho código.
-   
-   **Videovigilancia:** Por tu seguridad y control operativo, aceptas que el inmueble cuenta con sistemas de grabación (CCTV) activos.
-
-5. **Responsabilidad del Usuario**
-   **Uso del Espacio:** Te comprometes a usar la sala exclusivamente para fines profesionales (juntas, capacitaciones, trabajo). Queda prohibido cualquier uso ilícito, peligroso o que atente contra la moral.
-   
-   **Invitados:** Como titular de la reserva, eres responsable de la conducta de tus acompañantes dentro de las instalaciones.
-   
-   **Datos:** Garantizas que la información que nos proporcionas (nombre, contacto) es real y verificable.
-
-6. **Daños y Limpieza** Eres responsable de cuidar el mobiliario y equipo. En caso de daños, desperfectos o suciedad excesiva causada por ti o tus invitados, autorizas a SPEC.MEET a realizar el cobro correspondiente por reparación, reposición o limpieza extraordinaria.
-
-7. **Limitación de Responsabilidad** .MEET no se hace responsable por:
-   
-   Objetos personales olvidados, perdidos o robados dentro de la sala.
-   
-   Interrupciones de servicio por causas de fuerza mayor (fallas eléctricas generales, internet del proveedor externo, desastres naturales).
-
-8. **Incumplimiento** .MEET se reserva el derecho de negar el acceso, suspender el servicio o solicitar el desalojo inmediato sin reembolso si detectamos un incumplimiento de estas normas o un mal uso de las instalaciones.
-
-9. **Política de Alimentos y Bebidas** Para mantener la higiene y calidad del espacio para todos, está prohibido el ingreso de alimentos, así como el consumo de bebidas alcohólicas. Se permite únicamente el consumo de snacks secos, agua y café, siempre cuidando la limpieza del mobiliario.
-
-10. **Aforo Máximo** La sala tiene una capacidad máxima de 10 personas. Por seguridad y confort, no se permite exceder este límite. En caso de sobrecupo, .MEET podrá cancelar la reserva de inmediato sin reembolso.
-
-11. **Protocolo de Salida (Check-out)** Al finalizar tu reserva, eres responsable de dejar la sala lista para el siguiente usuario:
-    
-    Apagar el Aire Acondicionado y las Luces.
-    
-    Verificar que la puerta quede bien cerrada al salir.
-    
-    No dejar basura fuera de los cestos.
-    
-    El incumplimiento de esto (especialmente dejar el A/C encendido) podrá generar un cargo extra.
-
-12. **Uso de Internet** La red WiFi es para uso profesional. Queda prohibido utilizarla para descargas ilegales, contenido para adultos o cualquier actividad que comprometa la seguridad digital de la red.
-
-13. **Modificaciones y Jurisdicción** Podemos actualizar estos términos en cualquier momento; los cambios serán efectivos al publicarse en nuestra plataforma. Para cualquier controversia legal, nos regimos por las leyes vigentes en México y los tribunales competentes del domicilio del proveedor.
-14. **Conducta**: Los usuarios deben mantener un comportamiento apropiado y respetuoso. SPEC.MEET se reserva el derecho de terminar el servicio sin reembolso en caso de conducta inapropiada.`,
-      additionalClauses: `**Modificaciones**: SPEC.MEET se reserva el derecho de modificar estos términos y condiciones en cualquier momento. Los cambios entrarán en vigor inmediatamente después de su publicación.
-
-**Ley Aplicable**: Estos términos se rigen por las leyes de los Estados Unidos Mexicanos. Cualquier disputa será resuelta en los tribunales competentes de Ciudad de México.`,
-      privacyOptions: {
-        collectEmail: true,
-        shareData: false,
-        cctvNotice: true,
-        cookieConsent: true
-      }
-    };
-  }
-};
-
-const TermsAndConditions: React.FC = () => {
-  const [termsData, setTermsData] = useState<TermsData | null>(null);
+const TCPage: React.FC = () => {
+  const [data, setData] = useState<{
+    terms: TermsSettings;
+    pricing: PricingSettings;
+    location: LocationSettings;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadTerms = async () => {
+    const loadAllConfig = async () => {
       try {
-        const data = await api.fetchTerms();
-        setTermsData(data);
+        setLoading(true);
+        // Traemos toda la configuración necesaria para llenar las variables
+        const [termsRes, pricingRes, locationRes] = await Promise.all([
+          api.get('/admin/settings/terms'),
+          api.get('/admin/settings/pricing'),
+          api.get('/admin/settings/location')
+        ]);
+
+        setData({
+          terms: termsRes.data,
+          pricing: pricingRes.data,
+          location: locationRes.data
+        });
       } catch (err) {
-        console.error('Error loading terms:', err);
+        console.error('Error al cargar términos:', err);
+        setError('No se pudo cargar la información legal. Por favor, intenta más tarde.');
       } finally {
         setLoading(false);
       }
     };
 
-    loadTerms();
+    loadAllConfig();
   }, []);
 
-  const renderFormattedText = (text: string) => {
-    const parts = text.split(/(\*\*.*?\*\*)/g);
-    return parts.map((part, index) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={index} className="font-semibold">{part.slice(2, -2)}</strong>;
-      }
-      return <span key={index}>{part}</span>;
-    });
-  };
+  /**
+   * Función que procesa la plantilla y reemplaza todas las etiquetas dinámicas
+   */
+  const renderProcessedTemplate = (template: string) => {
+    if (!data) return template;
 
-  const renderContent = (content: string) => {
-    return content.split('\n').map((line, index) => {
-      if (line.trim() === '') {
-        return <div key={index} className="h-4" />;
-      }
-      return (
-        <p key={index} className="text-gray-800 text-[15px] leading-relaxed mb-4">
-          {renderFormattedText(line)}
-        </p>
-      );
-    });
+    // Generar texto de paquetes
+    const packagesList = data.pricing.packages && data.pricing.packages.length > 0
+      ? data.pricing.packages
+          .map(pkg => `${pkg.name} ($${pkg.price} MXN por ${pkg.hours}h)`)
+          .join(', ')
+      : 'Consultar paquetes vigentes en recepción';
+
+    return template
+      .replace(/{HOURLY_RATE}/g, `$${data.pricing.hourlyRate} MXN`)
+      .replace(/{LOCATION_NAME}/g, data.location.name)
+      .replace(/{LOCATION_ADDRESS}/g, data.location.address)
+      .replace(/{CAPACITY}/g, `${data.location.capacity} personas`)
+      .replace(/{WIFI_NETWORK}/g, data.location.name || 'Red Privada') 
+      .replace(/{PACKAGES_LIST}/g, packagesList)
+      .replace(/{FULL_REFUND_HOURS}/g, String(data.pricing.cancellationPolicy.fullRefund))
+      .replace(/{PARTIAL_REFUND_HOURS}/g, String(data.pricing.cancellationPolicy.partialRefund))
+      .replace(/{PARTIAL_REFUND_PERCENTAGE}/g, `${data.pricing.cancellationPolicy.partialRefundPercentage}%`);
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="h-8 w-8 text-gray-400 animate-spin" />
+      <div className="flex flex-col items-center justify-center min-h-screen bg-white">
+        <Loader2 className="h-10 w-10 text-purple-600 animate-spin mb-4" />
+        <p className="text-gray-500 animate-pulse">Cargando términos y condiciones...</p>
       </div>
-      
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-white px-4">
+        <div className="text-center">
+          <p className="text-red-500 font-medium">{error}</p>
+          <button onClick={() => window.location.reload()} className="mt-4 text-purple-600 underline"> Reintentar </button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-4xl mx-auto px-6 py-16">
-        {/* Simple Header - matching image style */}
-        <div className="mb-12">
-          <h1 className="text-2xl font-normal text-gray-900 tracking-[0.3em] text-center mb-3">
-            TÉRMINOS Y CONDICIONES DE SERVICO .MEET
-          </h1>
-          <div className="w-36 h-[1px] bg-gray-300 mx-auto"></div>
-        </div>
-        {/* Content */}
-        <div className="space-y-8">
-          {/* Introduction */}
-          <div>
-            <p className="text-gray-800 text-[15px] leading-relaxed mb-6">
-              Al reservar, pagar o utilizar los espacios de .MEET, aceptas y te comprometes a cumplir los siguientes lineamientos de servicio y uso:
-            </p>
+    <div className="bg-white min-h-screen">
+      {/* Header Estilizado */}
+      <div className="max-w-4xl mx-auto pt-16 pb-8 px-6 border-b border-gray-100">
+        <h1 className="text-3xl font-light text-center text-gray-900 tracking-tight">
+          TÉRMINOS Y CONDICIONES DE SERVICIO.MEET
+        </h1>
+      </div>
+
+      {/* Contenido Principal */}
+      <div className="max-w-4xl mx-auto px-6 py-12">
+        <div className="prose prose-purple max-w-none">
+          
+          {/* Plantilla procesada con variables */}
+          <div className="text-gray-800 leading-relaxed whitespace-pre-wrap text-[15px]">
+            {renderProcessedTemplate(data.terms.template)}
           </div>
 
-          {/* Main Terms */}
-          {termsData && renderContent(termsData.template)}
-
-          {/* Additional Clauses */}
-          {termsData?.additionalClauses && (
-            <div className="pt-8 mt-8 border-t border-gray-200">
-              {renderContent(termsData.additionalClauses)}
-            </div>
-          )}
-
-          {/* Privacy Section */}
-          {termsData?.privacyOptions && (
-            <div className="pt-8 mt-8 border-t border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900 mb-5">
-                Política de Privacidad
+          {/* Integración de Cláusulas Adicionales */}
+          {data.terms.additionalClauses && (
+            <div className="mt-12 pt-12 border-t border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900 mb-6 uppercase tracking-wider">
+                Disposiciones Complementarias
               </h2>
-              
-              <div className="space-y-3">
-                {termsData.privacyOptions.collectEmail && (
-                  <p className="text-gray-800 text-[15px] leading-relaxed">
-                    • Recopilamos su dirección de correo electrónico para comunicaciones relacionadas con su reserva y, con su consentimiento, para enviarle información sobre nuestros servicios.
-                  </p>
-                )}
-                
-                {termsData.privacyOptions.shareData && (
-                  <p className="text-gray-800 text-[15px] leading-relaxed">
-                    • Compartimos datos anónimos y agregados para mejorar nuestros servicios y experiencia del usuario.
-                  </p>
-                )}
-                
-                {termsData.privacyOptions.cctvNotice && (
-                  <p className="text-gray-800 text-[15px] leading-relaxed">
-                    • Nuestras instalaciones cuentan con videovigilancia CCTV por razones de seguridad. Las grabaciones se mantienen de manera confidencial y se utilizan únicamente para fines de seguridad.
-                  </p>
-                )}
-                
-                {termsData.privacyOptions.cookieConsent && (
-                  <p className="text-gray-800 text-[15px] leading-relaxed">
-                    • Utilizamos cookies para mejorar su experiencia en nuestro sitio web. Al continuar navegando, usted acepta el uso de cookies de acuerdo con nuestra política.
-                  </p>
-                )}
+              <div className="text-gray-700 leading-relaxed whitespace-pre-wrap text-[15px] bg-gray-50 p-6 rounded-xl border border-gray-100">
+                {data.terms.additionalClauses}
               </div>
             </div>
           )}
+
+          {/* Opciones de Privacidad Dinámicas */}
+          
         </div>
+
+        {/* Footer de la página */}
+      
       </div>
     </div>
   );
 };
 
-export default TermsAndConditions;
+export default TCPage;

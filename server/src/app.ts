@@ -1,12 +1,11 @@
 import express, {Application} from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-
-// rutas
-import authRoutes from './routes/auth.routes';
-import routerRoom from './routes/room.routes';
-import reservas from './routes/reservation.routes';
-import webhookRoutes from './routes/webhook.routes';
+import authRoutes from './routes/auth_routes';
+import routerRoom from './routes/room_routes';
+import dashboardRoutes from './routes/dashboard.routes';
+import adminSettingsRoutes from './routes/admin.settings.routes';
+import usersRoutes from './routes/user.routes';
 
 const app: Application = express();
 
@@ -22,7 +21,12 @@ app.get('/', (req, res)=>{
     res.send('API de SPEC.MEET funcionando y segura');
 });
 
-app.use('/api/rooms', routerRoom);
-app.use('/api/reservations', reservas);
+app.use('/api/rooms', routerRoom)
 
+
+app.use('/api/admin/settings', adminSettingsRoutes);
+
+app.use('/api/admin', usersRoutes);
+
+app.use('/api/dashboard', dashboardRoutes);
 export default app;
