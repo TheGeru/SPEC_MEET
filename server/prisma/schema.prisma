@@ -20,15 +20,15 @@ model User {
   name String
   role String @default("CLIENT") //"ADMIN" O "CLIENT"
   createdAt DateTime @default(now())
-
   //RELACION: UN USUARIO PUEDE TENER MUCHAS RESERVAS
-
   reservation Reservation[]
 }
 
 model Room {
   id String @id @default(uuid())
   name String
+  ttlock_lock_id String?
+  capacity Int @default(10)
   wifi_ssid String
   wifi_pass String
   price_per_hour Decimal
@@ -51,15 +51,21 @@ model Reservation {
   //conexiones
   user User @relation(fields: [userId], references: [id])
   room Room @relation(fields: [roomId], references: [id])
-  paymment Payment? // Relacion 1:1 
+  payment Payment? // Relacion 1:1 
 
   //Datos de la reserva
   start_time DateTime
   end_time DateTime
+
   access_code String?
+  terms_accepted Boolean @default(false)
+  accepted_terms_version String?
+
   total_paid Decimal
   status String @default("PENDING") //PENDING, PAID, CANCELLED, COMPLETED
   createdAt DateTime @default(now())
+
+  @@index([roomId, start_time, end_time])
 }
 
 model Payment {
@@ -71,6 +77,8 @@ model Payment {
 
   //Datos del pago
   amount Decimal
+  currency String @default("MXN")
+  paymentMethod String? // card, SPEI etc..
   provider_id String
   status String
   iva_breakdown String

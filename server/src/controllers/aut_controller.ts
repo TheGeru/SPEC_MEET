@@ -71,7 +71,15 @@ export const login = async (req: Request, res: Response): Promise<void> => {
             where: {email},
         });
         if(!user){
-            res.status(401).json({error: "Credenciales Invalidas"});
+            res.status(401).json({error: "Credenciales Invalidas, revise los datos"});
+            return;
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+
+        if (!isPasswordValid) {
+            // Si la contraseña no coincide, adiós.
+            res.status(401).json({ error: "Credenciales Inválidas, revise los datos" });
             return;
         }
 

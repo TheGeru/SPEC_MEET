@@ -11,6 +11,8 @@ const app: Application = express();
 
 app.use(helmet());
 app.use(cors());
+
+app.use('/api/webhooks', express.raw({type: '*/*'}),webhookRoutes);
 app.use(express.json());
 
 

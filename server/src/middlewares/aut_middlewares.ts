@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import jwt  from 'jsonwebtoken';
 
-interface TokePayload {
+interface TokenPayload {
     userId: string;
     role: string;
 }
@@ -9,7 +9,7 @@ interface TokePayload {
 declare global {
     namespace Express {
         interface Request {
-            user?: TokePayload;
+            user?: TokenPayload;
         }
     }
 }
@@ -31,10 +31,11 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
 
     try {
         const secret = process.env.JWT_SECRET as string;
-        const decode = jwt.verify(token, secret) as TokePayload;
+        const decode = jwt.verify(token, secret) as TokenPayload;
         req.user = decode;
         next()
     } catch(error){
         res.status(403).json({error: 'Token invalido o expirado'});
+        return;
     }
 }

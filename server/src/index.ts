@@ -1,7 +1,8 @@
-import app from './app';
-import dotenv from 'dotenv';
+import dotenv from 'dotenv'; // 1. Importar dotenv primero
+dotenv.config();             // 2. CONFIGURARLO INMEDIATAMENTE
 
-dotenv.config();
+import app from './app';     // 3. Ahora sí, importar la app (ya tendrá acceso a las variables)
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {

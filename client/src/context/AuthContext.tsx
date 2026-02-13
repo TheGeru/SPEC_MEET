@@ -1,5 +1,6 @@
 import React, { useEffect, useState, createContext, useContext } from 'react';
 import api from '../api/axios';
+import { AxiosError } from 'axios';
 
 interface User {
   id: string;
@@ -46,8 +47,9 @@ export const AuthProvider: React.FC<{
     localStorage.setItem('specMeetUser', JSON.stringify(fullUser));
     
     return fullUser; // <--- Agrega este return
-  } catch (error: any) {
-    throw new Error(error.response?.data?.error || 'Credenciales inválidas');
+  } catch (error) {
+    const axiosError = error as AxiosError<{error: string}>;
+    throw new Error(axiosError.response?.data?.error || 'Credenciales inválidas');
   } finally {
     setIsLoading(false);
   }
@@ -59,8 +61,12 @@ export const AuthProvider: React.FC<{
       // API called to register the user
       await api.post('/auth/register', { name, email, password });
       await login(email, password);
-    } catch (error: any) {
-      const message = error.response?.data?.error || 'Error al registrar el usuario';
+    } catch (error) {
+      let message = 'Error al registrar al usuario';
+      if(error instanceof AxiosError){
+        message = error.response?.data?.console.error || 'Error al registrar el usuario';
+        
+      }
       throw new Error(message);
     } finally {
       setIsLoading(false);
@@ -90,6 +96,7 @@ export const AuthProvider: React.FC<{
     </AuthContext.Provider>
   );
 }
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
