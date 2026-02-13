@@ -107,3 +107,72 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
         res.status(500).json({error: "Error interno del servidor al procesar la reserva"});
     }
 }
+
+// Agrega esto en reservation.controller.ts
+export const getReservationsByDate = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { roomId, date } = req.query;
+
+        if (!roomId || !date) {
+             res.status(400).json({ error: "Faltan parámetros roomId o date" });
+             return;
+        }
+
+        // Definir el rango del día completo (00:00 a 23:59)
+        const startOfDay = new Date(`${date}T00:00:00`);
+        const endOfDay = new Date(`${date}T23:59:59`);
+
+        const reservations = await prisma.reservation.findMany({
+            where: {
+                roomId: String(roomId),
+                status: { not: "CANCELLED" }, // Ignorar canceladas
+                start_time: {
+                    gte: startOfDay,
+                    lte: endOfDay
+                }
+            },
+            select: {
+                start_time: true,
+                end_time: true
+            }
+        });
+
+        res.json(reservations);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error al obtener reservas" });
+    }
+};
+
+// Obtener SOLO las reservas del usuario que está logueado
+export const getMyReservations = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = (req as any).user?.userId || (req as any).user?.id;
+        
+        // Obtenemos todas las reservas futuras o actuales de este usuario
+        const myReservations = await prisma.reservation.findMany({
+            where: {
+                userId: userId,
+                status: { not: "CANCELLED" },
+                start_time: {
+                    gte: new Date() // Solo reservas futuras o de hoy (opcional)
+                }
+            },
+            select: {
+                start_time: true
+            }
+        });
+
+        // Solo nos interesa devolver las fechas para marcarlas en el calendario
+        // Formato simplificado: ["2026-02-14", "2026-02-20"]
+        const dates = myReservations.map(r => r.start_time.toISOString().split('T')[0]);
+        
+        // Eliminamos duplicados (por si tiene 2 reservas el mismo día)
+        const uniqueDates = [...new Set(dates)];
+
+        res.json(uniqueDates);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error obteniendo mis reservas" });
+    }
+};

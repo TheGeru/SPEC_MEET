@@ -72,9 +72,11 @@ const BookingPage: React.FC = () => {
   const [selectedDuration, setSelectedDuration] = useState<number>(1);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
   const [currentCalendarMonth, setCurrentCalendarMonth] = useState(new Date());
-  
+  const [existingReservations, setExistingReservations] = useState<{start: Date, end: Date}[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState('');
+  const [myBookedDates, setMyBookedDates] = useState<string[]>([]);
+
 
   React.useEffect(() => {
     const fetchRoom = async () => {
@@ -99,53 +101,91 @@ const BookingPage: React.FC = () => {
     fetchRoom();
   }, [clientSecret]);
 
+  interface ReservationResponse {
+    start_time: string;
+    end_time: string;
+  }
+
+  React.useEffect(() => {
+    const fetchReservations = async () => {
+        if (!roomId || !selectedDate) return;
+        
+        try {
+            // Pide al backend las reservas de ese día
+            const response = await api.get(`/reservations?roomId=${roomId}&date=${selectedDate}`);
+            
+            // Convertimos las strings de fecha a objetos Date reales
+            const data = response.data as ReservationResponse[];
+            const formattedReservations = data.map((res) => ({
+                start: new Date(res.start_time),
+                end: new Date(res.end_time)
+            }));
+            
+            setExistingReservations(formattedReservations);
+        } catch (error) {
+            console.error("Error cargando horarios ocupados:", error);
+        }
+    };
+
+    fetchReservations();
+}, [selectedDate, roomId]);
+
+React.useEffect(() => {
+    const fetchMyBookings = async () => {
+        try {
+            const response = await api.get('/reservations/my-reservations');
+            setMyBookedDates(response.data); // Guardamos las fechas ["2026-02-14", ...]
+        } catch (error) {
+            console.error("Error cargando mis reservas:", error);
+        }
+    };
+    fetchMyBookings();
+}, [clientSecret]);
+
   //const [speiReference, setSpeiReference] = useState('');
   // funcion para filtrar horas disponibles, depende de la hora que detecte en el navegador
-  const getDailyTimeSlots = () => {
-    const baseSlots = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
-    if (!selectedDate) return baseSlots;
-    // Crear objeto fecha basado en la selección (asumiendo zona horaria local)
+const getDailyTimeSlots = () => {
+    // Generamos slots cada 30 min desde las 9am hasta las 6pm
+    const slots = [];
+    let startHour = 9;
+    const endHour = 18;
+
+    while (startHour < endHour) {
+        // Hora en punto
+        slots.push(`${startHour.toString().padStart(2, '0')}:00`);
+        // Media hora
+        slots.push(`${startHour.toString().padStart(2, '0')}:30`);
+        startHour++;
+    }
+    // Agregamos la última hora límite (18:00) si es necesario cerrar ahí
+    slots.push(`${endHour}:00`);
+
+    if (!selectedDate) return slots;
+
+    // Filtro para no mostrar horas pasadas si es "Hoy"
     const now = new Date();
-    const selectedDateObj = new Date(`${selectedDate}T12:00:00`); 
-    // Ajuste para comparar fechas sin horas (resetear horas a 0 para comparar solo dia/mes/año)
+    const selectedDateObj = new Date(`${selectedDate}T12:00:00`);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const checkDate = new Date(selectedDateObj);
     checkDate.setHours(0, 0, 0, 0);
-    const isToday = 
-    checkDate.getTime() === today.getTime() &&
-    checkDate.getMonth() === today.getMonth() &&
-    checkDate.getFullYear() === today.getFullYear();
 
-    if (isToday) {
-      const currentHour = now.getHours();
-      return baseSlots.filter(slot => {
-        const slotHour = parseInt(slot.split(':')[0], 10);
-        return slotHour > currentHour;
-      });
+    if (checkDate.getTime() === today.getTime()) {
+        const currentHour = now.getHours();
+        const currentMinutes = now.getMinutes();
+        
+        return slots.filter(slot => {
+            const [slotHour, slotMin] = slot.split(':').map(Number);
+            // Si la hora es mayor, pasa. Si es la misma hora, los minutos deben ser mayores.
+            if (slotHour > currentHour) return true;
+            if (slotHour === currentHour && slotMin > currentMinutes) return true;
+            return false;
+        });
     }
-    // Si la fecha es pasada (ayer), no mostrar nada
-    if (checkDate < today) {
-        return []; 
-    }
-    // Si es futuro, mostrar todo
-    return baseSlots;
-  };
 
-  // TODO: CREO AQUI ES DONDE SE HARIAN LAS CONSULTAS DE LAS RESERVAS YA ECHAS, 
-  const existingReservations = [{
-    date: '2023-12-15',
-    slots: ['09:00', '10:00', '11:00', '14:00', '15:00']
-  }, {
-    date: '2023-12-16',
-    slots: ['12:00', '13:00', '16:00']
-  }, {
-    date: '2023-12-18',
-    slots: ['09:00', '10:00', '17:00', '18:00']
-  }, {
-    date: '2023-12-20',
-    slots: ['11:00', '12:00', '13:00']
-  }];
+    if (checkDate < today) return [];
+    return slots;
+};
 
   const handleNextStep = async () => {
     if (currentStep === 'date') {
@@ -207,10 +247,34 @@ const BookingPage: React.FC = () => {
     setCurrentCalendarMonth(newDate);
   };
 
-  const isTimeSlotAvailable = (date: string, time: string) => {
-    const reservation = existingReservations.find(r => r.date === date);
-    if (!reservation) return true;
-    return !reservation.slots.includes(time);
+  const isTimeSlotAvailable = (dateStr: string, timeStr: string) => {
+    if (existingReservations.length === 0) return true;
+
+    // 1. Crear fecha de INICIO propuesta
+    const proposedStart = new Date(`${dateStr}T${timeStr}:00`);
+    
+    // 2. Crear fecha de FIN propuesta (basada en la duración seleccionada)
+    // Ojo: Si el usuario cambia la duración en el UI, esto se recalcula
+    const proposedEnd = new Date(proposedStart);
+    proposedEnd.setHours(proposedEnd.getHours() + selectedDuration);
+
+    // 3. Revisar conflictos con reservas existentes
+    const CLEANING_TIME_MS = 30 * 60 * 1000; // 30 minutos en milisegundos
+
+    return !existingReservations.some(reservation => {
+        // Rango ocupado real: Desde InicioReserva hasta FinReserva + 30mins limpieza
+        const busyStart = reservation.start.getTime(); 
+        // 👇 AQUÍ ESTÁ EL TRUCO: Extendemos el bloqueo 30 mins después del fin
+        const busyEnd = reservation.end.getTime() + CLEANING_TIME_MS; 
+
+        // Lógica de colisión de rangos:
+        // (InicioPropuesto < FinOcupado) Y (FinPropuesto > InicioOcupado)
+        return (
+            proposedStart.getTime() < busyEnd && 
+            proposedEnd.getTime() > busyStart
+        );
+    });
+
   };
 
   const calculateTotal = () => {
@@ -245,8 +309,11 @@ const BookingPage: React.FC = () => {
   };
   // Check if a day has reservations
   const hasDayReservations = (day: Date) => {
-    const dateString = day.toISOString().split('T')[0];
-    return existingReservations.some(r => r.date === dateString);
+    const calendarStr = day.toISOString().split('T')[0];
+    return existingReservations.some(r => {
+      const reservationDateStr = r.start.toISOString().split('T')[0];
+      return reservationDateStr === calendarStr;
+    });
   };
   // Render functions for each step
   const renderCalendarView = () => <div>
@@ -281,23 +348,50 @@ const BookingPage: React.FC = () => {
         const isSelected = dateString === selectedDate;
         const hasReservations = hasDayReservations(day);
         const isToday = day.getDate() === new Date().getDate() && day.getMonth() === new Date().getMonth() && day.getFullYear() === new Date().getFullYear();
-        return <div key={day.toString()} className={`h-20 p-1 rounded-md overflow-hidden cursor-pointer
-                ${isSelected ? 'bg-white bg-opacity-30 backdrop-blur-sm border border-white border-opacity-30' : ''}
-                ${isToday ? 'bg-white bg-opacity-15 backdrop-blur-sm border border-white border-opacity-20' : 'bg-white bg-opacity-10 backdrop-blur-sm'}
-                ${!isSelected && !isToday ? 'hover:bg-white hover:bg-opacity-20' : ''}
-              `} onClick={() => {
+
+        const isMyBooking = myBookedDates.includes(dateString);
+
+        return (
+      <div 
+        key={day.toString()} 
+        className={`h-20 p-1 rounded-md overflow-hidden cursor-pointer relative border transition-all
+          ${isSelected ? 'bg-white bg-opacity-30 border-white border-opacity-50' : ''}
+          ${isToday ? 'bg-white bg-opacity-10 border-blue-400 border-opacity-50' : 'bg-white bg-opacity-5 border-transparent'}
+          ${!isSelected ? 'hover:bg-white hover:bg-opacity-15' : ''}
+        `} 
+        onClick={() => {
           const dateStr = day.toISOString().split('T')[0];
           setSelectedDate(dateStr);
-        }}>
-              <div className={`text-right p-1 text-sm ${isToday ? 'font-bold text-white' : 'text-white'}`}>
-                {day.getDate()}
-              </div>
-              <div className="space-y-1">
-                {hasReservations && <div className="px-1 py-0.5 text-xs bg-red-500 bg-opacity-30 text-white rounded truncate backdrop-blur-sm">
-                    Reservado
-                  </div>}
-              </div>
-            </div>;
+        }}
+      >
+          {/* Número del día */}
+          <div className={`text-right p-1 text-sm ${isToday ? 'font-bold text-blue-300' : 'text-white'}`}>
+            {day.getDate()}
+          </div>
+
+          {/* 👇 AQUÍ ESTÁ LA MARCA VISUAL */}
+          <div className="flex flex-col gap-1 items-start pl-1">
+            
+            {/* Si es mi reserva, mostramos un badge verde/azul */}
+            {isMyBooking && (
+                <div className="px-1.5 py-0.5 text-[10px] bg-blue-500 text-white rounded shadow-sm font-medium w-full truncate">
+                    Mi Reserva
+                </div>
+            )}
+
+            {hasReservations && !isMyBooking && (
+                <div className="flex items-center gap-1 mt-1">
+                  <div className="w-2 h-2 bg-red-400 rounded-full shadow-sm"></div>
+                  <span className="text-[10px] text-red-200/70 hidden sm:block">Ocupado</span>
+                  </div>
+            )}
+            
+            {/* Opcional: Un puntito simple si prefieres algo minimalista */}
+            {/* {isMyBooking && <div className="w-2 h-2 bg-blue-400 rounded-full mx-auto mt-1 shadow-[0_0_5px_rgba(96,165,250,0.8)]"></div>} */}
+
+          </div>
+      </div>
+      );
       })}
       </div>
       {selectedDate && <div className="mt-4 bg-white bg-opacity-10 backdrop-blur-sm p-4 rounded-lg">

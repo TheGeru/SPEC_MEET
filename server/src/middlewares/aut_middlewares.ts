@@ -14,28 +14,22 @@ declare global {
     }
 }
 
-export const authenticateToken = (req: Request, res: Response, next: NextFunction): void =>{
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
 
-    /*console.log("--- DEBUG MIDDLEWARE ---");
-    console.log("1. Header completo:", authHeader);
-    console.log("2. Token extraído:", token);
-    console.log("3. Longitud del token:", token ? token.length : 0);
-    console.log("4. Mi Secreto:", process.env.JWT_SECRET);*/
+export const authenticateToken = (req: Request, res: Response, next: NextFunction) =>{
+    console.log("LLEGUE AL MIDDLEWARE NUEVO - VERSION FINAL 🔥");
+    console.log("Cookies recibidas:", req.cookies);
+    const token = req.cookies['auth_token'];
 
     if(!token){
         res.status(401).json({error: 'Acceso denegado Token no proporcionado correctamente'});
         return;
     }
-
     try {
-        const secret = process.env.JWT_SECRET as string;
-        const decode = jwt.verify(token, secret) as TokenPayload;
-        req.user = decode;
-        next()
+        const verified = jwt.verify(token, process.env.JWT_SECRET!);
+        req.user = verified as TokenPayload;
++       next();
     } catch(error){
         res.status(403).json({error: 'Token invalido o expirado'});
         return;
     }
-}
+};
