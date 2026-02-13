@@ -77,3 +77,4 @@ model Payment {
   createdAt DateTime @default(now())
 
 }
+
