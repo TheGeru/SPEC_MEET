@@ -17,7 +17,7 @@ export const handleStripeWebhook = async (req: Request, res: Response): Promise<
         // req.body AQUÍ viene como Buffer (crudo) gracias a la configuración que hicimos en app.ts
         event = constructEvent(req.body, sig);
     } catch (err) {
-        console.error("Error validando firma del Webhook:", err);
+        console.error("Error validando firma del Webhook:", err)
         res.status(400).send(`Webhook Error: ${err}`);
         return;
     }

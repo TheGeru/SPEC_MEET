@@ -212,3 +212,83 @@ export const updateTermsSettings = async (req: Request, res: Response): Promise<
         res.status(500).json({ error: "Error guardando términos" });
     }
 };
+
+// ==========================================
+// 4. GESTIÓN DE BLOQUEOS (MANTENIMIENTO)
+// ==========================================
+
+export const createBlockedSlot = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { roomId, startTime, endTime, reason } = req.body;
+        
+        // Validación básica
+        if (!roomId || !startTime || !endTime) {
+             res.status(400).json({ error: "Faltan datos de fecha o sala" });
+             return;
+        }
+
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+
+        if (start >= end) {
+             res.status(400).json({ error: "La fecha fin debe ser mayor a la de inicio" });
+             return;
+        }
+
+        // Verificar que no haya reservas en ese lapso antes de bloquear
+        // (Opcional: Si quieres bloquear a la fuerza, quita esta verificación)
+        const conflict = await prisma.reservation.findFirst({
+            where: {
+                roomId: roomId,
+                status: { not: "CANCELLED" },
+                AND: [
+                    { start_time: { lt: end } },
+                    { end_time: { gt: start } }
+                ]
+            }
+        });
+
+        if (conflict) {
+             res.status(409).json({ error: "No se puede bloquear: Hay reservas existentes en ese horario." });
+             return;
+        }
+
+        await prisma.blockedSlot.create({
+            data: {
+                roomId,
+                start_time: start,
+                end_time: end,
+                reason: reason || "Mantenimiento General"
+            }
+        });
+
+        res.json({ message: "Bloqueo creado correctamente" });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error al crear bloqueo" });
+    }
+};
+
+// ... al final del archivo ...
+
+export const deleteBlockedSlot = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+
+        if (!id) {
+            res.status(400).json({ error: "ID es requerido" });
+            return;
+        }
+
+        // Verificar que exista antes de borrar (opcional, prisma lanza error si no)
+        await prisma.blockedSlot.delete({
+            where: { id: id }
+        });
+
+        res.json({ message: "Bloqueo eliminado correctamente" });
+    } catch (error) {
+        console.error("Error eliminando bloqueo:", error);
+        res.status(500).json({ error: "Error al eliminar el bloqueo" });
+    }
+};

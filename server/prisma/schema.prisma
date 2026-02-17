@@ -8,33 +8,46 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-model User {
-  id          String        @id @default(uuid())
-  email       String        @unique
-  password    String
-  name        String
-  role        String        @default("CLIENT")
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime @updatedAt
+// ---------------------------------------------------------
+// MODELOS DE USUARIO Y AUTENTICACIÓN
+// ---------------------------------------------------------
 
-  resetPasswordToken String? @unique
-  resetPasswordExpired DateTime?
-  
-  reservation Reservation[]
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("CLIENT") // Ojo: Si usas un Enum, cámbialo aquí
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Recuperación de contraseña
+  resetPasswordToken   String?   @unique
+  resetPasswordExpire DateTime? // Corregido a 'Expires' para coincidir con el controlador
+
+  // Relaciones
+  reservations Reservation[]
 }
 
+// ---------------------------------------------------------
+// MODELOS DE SALAS Y RESERVAS
+// ---------------------------------------------------------
+
 model Room {
-  id             String        @id @default(uuid())
+  id             String   @id @default(uuid())
   name           String
   wifi_ssid      String
   wifi_pass      String
   price_per_hour Decimal
-  createdAt      DateTime      @default(now())
-  status         String        @default("INACTIVO")
-  updatedAt      DateTime      @updatedAt
-  capacity       Int           @default(10)
+  capacity       Int      @default(10)
+  status         String   @default("INACTIVO")
   ttlock_lock_id String?
-  reservations   Reservation[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relaciones
+  reservations Reservation[]
+  blockedSlots BlockedSlot[] // 👈 NUEVO: Relación inversa para los mantenimientos
 }
 
 model Reservation {
@@ -46,45 +59,52 @@ model Reservation {
   access_code            String?
   total_paid             Decimal
   status                 String   @default("PENDING")
-  createdAt              DateTime @default(now())
-  accepted_terms_version String?
   terms_accepted         Boolean  @default(false)
-  payment                Payment?
-  room                   Room     @relation(fields: [roomId], references: [id])
-  user                   User     @relation(fields: [userId], references: [id])
+  accepted_terms_version String?
+  createdAt              DateTime @default(now())
 
+  // Relaciones
+  payment Payment?
+  room    Room     @relation(fields: [roomId], references: [id])
+  user    User     @relation(fields: [userId], references: [id])
+
+  // Índices para búsquedas rápidas de disponibilidad
   @@index([roomId, start_time, end_time])
 }
 
+// 👇 NUEVO MODELO: Para bloquear salas por mantenimiento o administración
+model BlockedSlot {
+  id         String   @id @default(uuid())
+  roomId     String
+  start_time DateTime
+  end_time   DateTime
+  reason     String? // Ej: "Limpieza", "Reparación", "Evento Privado"
+  createdAt  DateTime @default(now())
+
+  // Relaciones
+  room Room @relation(fields: [roomId], references: [id])
+
+  // Índice para búsqueda rápida
+  @@index([roomId, start_time, end_time])
+}
+
+// ---------------------------------------------------------
+// MODELOS DE PAGOS Y FINANZAS
+// ---------------------------------------------------------
+
 model Payment {
-  id            String      @id @default(uuid())
-  reservationId String      @unique
+  id            String   @id @default(uuid())
+  reservationId String   @unique
   amount        Decimal
-  provider_id   String
-  status        String
-  iva_breakdown String
-  createdAt     DateTime    @default(now())
-  currency      String      @default("MXN")
+  currency      String   @default("MXN")
+  provider_id   String // Stripe Payment Intent ID
+  status        String // succeeded, pending, failed
   paymentMethod String?
-  reservation   Reservation @relation(fields: [reservationId], references: [id])
-}
+  iva_breakdown String? // Guardamos el JSON del desglose como String
+  createdAt     DateTime @default(now())
 
-model SystemSetting {
-  id          String   @id @default(uuid())
-  key         String   @unique
-  value       String
-  description String?
-  dataType    String   @default("TEXT")
-  updatedAt   DateTime @updatedAt
-}
-
-model TermsHistory {
-  id          String    @id @default(uuid())
-  version     String
-  content     String
-  activeFrom  DateTime  @default(now())
-  activeUntil DateTime?
-  createdAt   DateTime  @default(now())
+  // Relaciones
+  reservation Reservation @relation(fields: [reservationId], references: [id])
 }
 
 model PricingPackage {
@@ -98,12 +118,25 @@ model PricingPackage {
   updatedAt DateTime @updatedAt
 }
 
+// ---------------------------------------------------------
+// MODELOS DE CONFIGURACIÓN DEL SISTEMA
+// ---------------------------------------------------------
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  description String?
+  dataType    String   @default("TEXT")
+  updatedAt   DateTime @updatedAt
+}
+
 model BusinessConfig {
   id                 Int      @id @default(1)
   locationName       String   @default("SPEC.MEET Central")
   address            String
   accessInstructions String?
-  openingHours       Json
+  openingHours       Json // { "mon": { "open": "09:00", "close": "18:00" }, ... }
   refundFullHours    Int      @default(24)
   refundPartialHours Int      @default(12)
   refundPartialPct   Int      @default(50)
@@ -114,9 +147,18 @@ model TermsConfig {
   id                String   @id @default(uuid())
   version           String
   isActive          Boolean  @default(false)
-  templateContent   String
+  templateContent   String   @db.Text // @db.Text permite textos muy largos
   additionalClauses String?
   privacyOptions    Json
   createdAt         DateTime @default(now())
   createdBy         String?
+}
+
+model TermsHistory {
+  id          String    @id @default(uuid())
+  version     String
+  content     String    @db.Text
+  activeFrom  DateTime  @default(now())
+  activeUntil DateTime?
+  createdAt   DateTime  @default(now())
 }

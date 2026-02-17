@@ -1,13 +1,15 @@
 import { Router } from 'express';
+import { authenticateToken, authorizeAdmin } from '../middlewares/aut_middlewares';
 import { 
     getPricingSettings, 
-    updatePricingSettings, 
+    updatePricingSettings,
+    createBlockedSlot,
+    deleteBlockedSlot,
     getLocationSettings, 
     updateLocationSettings,
     getTermsSettings,
     updateTermsSettings
 } from '../controllers/admin_settings_controller';
-import { authenticateToken } from '../middlewares/aut_middlewares'; // Asegúrate que la ruta sea correcta
 
 const router = Router();
 
@@ -22,5 +24,8 @@ router.put('/location', authenticateToken, updateLocationSettings);
 // Rutas de Términos
 router.get('/terms', getTermsSettings);
 router.put('/terms', authenticateToken, updateTermsSettings);
+
+router.post('/blocks', authenticateToken, authorizeAdmin, createBlockedSlot);
+router.delete('/blocks/:id', authenticateToken, authorizeAdmin, deleteBlockedSlot);
 
 export default router;

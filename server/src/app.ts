@@ -9,6 +9,8 @@ import adminSettingsRoutes from './routes/admin.settings.routes';
 import usersRoutes from './routes/user.routes';
 import webhookRoutes from './routes/webhook.routes'
 
+import reservationRoutes from './routes/reservation.routes';
+
 const app: Application = express();
 
 app.use(helmet());
@@ -34,6 +36,6 @@ app.use('/api/rooms', routerRoom)
 app.use('/api/admin/settings', adminSettingsRoutes);
 
 app.use('/api/admin', usersRoutes);
-
+app.use('/api/reservations', reservationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 export default app;
