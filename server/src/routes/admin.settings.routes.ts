@@ -8,7 +8,9 @@ import {
     getLocationSettings, 
     updateLocationSettings,
     getTermsSettings,
-    updateTermsSettings
+    updateTermsSettings,
+    getWifiSettings,        // ← ADD THIS
+    updateWifiSettings 
 } from '../controllers/admin_settings_controller';
 
 const router = Router();

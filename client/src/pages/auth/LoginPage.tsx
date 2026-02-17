@@ -21,6 +21,7 @@ const LoginPage: React.FC = () => {
     try {
 
       const userLogged = await login(email, password, rememberMe);
+              //console.log("QUE ME DEVUELVE EL LOGIN?:", userLogged); 
       if(userLogged.role === 'ADMIN') {
         navigate('/admin');
       } else {

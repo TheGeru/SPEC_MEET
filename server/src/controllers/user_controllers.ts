@@ -5,17 +5,17 @@ export const getUsersWithReservations = async (req: Request, res: Response): Pro
     try {
         const users = await prisma.user.findMany({
             where: {
-                role: "CLIENT" // Solo traemos clientes, no administradores
+                role: {in: ["CLIENT", "ADMIN"]}
             },
             include: {
-                reservation: true // Incluimos sus reservas (nombre según tu schema.prisma)
+                reservations: true // Incluimos sus reservas (nombre según tu schema.prisma)
             }
         });
 
         // Formateamos la respuesta para que el frontend reciba "reservations" en plural
         const formattedUsers = users.map(user => ({
             ...user,
-            reservations: user.reservation // Mapeo para consistencia en el frontend
+            reservations: user.reservations // Mapeo para consistencia en el frontend
         }));
 
         res.json(formattedUsers);
