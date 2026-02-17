@@ -7,7 +7,6 @@ const Navbar: React.FC = () => {
     isAuthenticated,
     isAdmin,
     logout,
-    user
   } = useAuth();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);

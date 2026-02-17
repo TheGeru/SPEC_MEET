@@ -1,7 +1,7 @@
 import e, { Router } from "express";
 import { createRoom, deleteRoom, getRoomById, getRooms, updateRoom } from "../controllers/room_controllers";
 import { authenticateToken } from "../middlewares/aut_middlewares";
-import router from "./auth_routes";
+import router from "./auth.routes";
 
 const routerRoom = Router();
 

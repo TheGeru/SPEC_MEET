@@ -15,7 +15,7 @@ export const createRoom = async (req: Request, res: Response): Promise<void> => 
             });
             return;
         }
-        const { name, wifi_ssid, wifi_pass, price_per_hour, status } = validation.data;
+        const { name, wifi_ssid, wifi_pass, price_per_hour, status, ttlock_lock_id} = validation.data;
 
         const newRoom = await prisma.room.create({
             data: {
@@ -23,7 +23,8 @@ export const createRoom = async (req: Request, res: Response): Promise<void> => 
                 wifi_ssid,
                 wifi_pass,
                 price_per_hour,
-                status: status ?? "INACTIVO"
+                ttlock_lock_id: ttlock_lock_id || null, // Si no viene, pon null
+                status: status ?? "DISPONIBLE"
             }
         });
         res.status(201).json({
@@ -43,7 +44,7 @@ export const getRooms = async (req: Request, res: Response) : Promise<void> =>{
     try{
         const rooms = await prisma.room.findMany({
             where: {
-                status: "DISPONBLE"
+                status: "DISPONIBLE"
             }
         });
         res.json(rooms);

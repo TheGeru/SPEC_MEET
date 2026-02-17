@@ -1,80 +1,122 @@
-// configuracion de la conexion a la base de datos y el esquema de datos
+generator client {
+  provider = "prisma-client-js"
+}
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
-// GENERAR CLIENTE PARA USARLO EN EL CODIGO TS DEL CLIENT
-generator client {
-    provider = "prisma-client-js"
-}
-
-// ------------------------MODELOS DE DATOS (LAS TABLAS)-----------------
-
 model User {
-  id String @id @default(uuid()) //GENERAMOS UN ID UNICA PARA CADA USUARIO
-  email String @unique
-  password String
-  name String
-  role String @default("CLIENT") //"ADMIN" O "CLIENT"
-  createdAt DateTime @default(now())
+  id          String        @id @default(uuid())
+  email       String        @unique
+  password    String
+  name        String
+  role        String        @default("CLIENT")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime @updatedAt
 
-  //RELACION: UN USUARIO PUEDE TENER MUCHAS RESERVAS
-
+  resetPasswordToken String? @unique
+  resetPasswordExpired DateTime?
+  
   reservation Reservation[]
 }
 
 model Room {
-  id String @id @default(uuid())
-  name String
-  wifi_ssid String
-  wifi_pass String
+  id             String        @id @default(uuid())
+  name           String
+  wifi_ssid      String
+  wifi_pass      String
   price_per_hour Decimal
-
-  status String @default("INACTIVO")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-    //Relacion : una sala tiene muchas reservas a diferente hora y fecha
-  reservations Reservation[]
+  createdAt      DateTime      @default(now())
+  status         String        @default("INACTIVO")
+  updatedAt      DateTime      @updatedAt
+  capacity       Int           @default(10)
+  ttlock_lock_id String?
+  reservations   Reservation[]
 }
 
 model Reservation {
-  id String @id @default(uuid())
+  id                     String   @id @default(uuid())
+  userId                 String
+  roomId                 String
+  start_time             DateTime
+  end_time               DateTime
+  access_code            String?
+  total_paid             Decimal
+  status                 String   @default("PENDING")
+  createdAt              DateTime @default(now())
+  accepted_terms_version String?
+  terms_accepted         Boolean  @default(false)
+  payment                Payment?
+  room                   Room     @relation(fields: [roomId], references: [id])
+  user                   User     @relation(fields: [userId], references: [id])
 
-  //claves Foraneos (relaciones)
-  userId String
-  roomId String
-
-  //conexiones
-  user User @relation(fields: [userId], references: [id])
-  room Room @relation(fields: [roomId], references: [id])
-  paymment Payment? // Relacion 1:1 
-
-  //Datos de la reserva
-  start_time DateTime
-  end_time DateTime
-  access_code String?
-  total_paid Decimal
-  status String @default("PENDING") //PENDING, PAID, CANCELLED, COMPLETED
-  createdAt DateTime @default(now())
+  @@index([roomId, start_time, end_time])
 }
 
 model Payment {
-  id String @id @default(uuid())
-  
-  //Relacion 1:1 con reserva
-  reservationId String @unique
-  reservation Reservation @relation(fields: [reservationId], references: [id])
-
-  //Datos del pago
-  amount Decimal
-  provider_id String
-  status String
+  id            String      @id @default(uuid())
+  reservationId String      @unique
+  amount        Decimal
+  provider_id   String
+  status        String
   iva_breakdown String
-  createdAt DateTime @default(now())
-
+  createdAt     DateTime    @default(now())
+  currency      String      @default("MXN")
+  paymentMethod String?
+  reservation   Reservation @relation(fields: [reservationId], references: [id])
 }
 
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  description String?
+  dataType    String   @default("TEXT")
+  updatedAt   DateTime @updatedAt
+}
+
+model TermsHistory {
+  id          String    @id @default(uuid())
+  version     String
+  content     String
+  activeFrom  DateTime  @default(now())
+  activeUntil DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model PricingPackage {
+  id        Int      @id @default(autoincrement())
+  name      String
+  hours     Int
+  price     Decimal
+  discount  Int
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BusinessConfig {
+  id                 Int      @id @default(1)
+  locationName       String   @default("SPEC.MEET Central")
+  address            String
+  accessInstructions String?
+  openingHours       Json
+  refundFullHours    Int      @default(24)
+  refundPartialHours Int      @default(12)
+  refundPartialPct   Int      @default(50)
+  updatedAt          DateTime @updatedAt
+}
+
+model TermsConfig {
+  id                String   @id @default(uuid())
+  version           String
+  isActive          Boolean  @default(false)
+  templateContent   String
+  additionalClauses String?
+  privacyOptions    Json
+  createdAt         DateTime @default(now())
+  createdBy         String?
+}

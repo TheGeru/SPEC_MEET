@@ -2,34 +2,44 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { AtSignIcon, LockIcon, ArrowRightIcon } from 'lucide-react';
+import { AxiosError } from 'axios';
+
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const {
-    login
-  } = useAuth();
+  const {login} = useAuth();
   const navigate = useNavigate();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-    try {
-    await login(email, password);
-    const savedUser = JSON.parse(localStorage.getItem('specMeetUser') || '{}');
 
-    if (savedUser.role === 'ADMIN') {
-      navigate('/admin'); // Redirige al Panel de Admin
-    } else {
-      navigate('/dashboard'); // Redirige al Dashboard de Cliente
-    }
+    try {
+
+      const userLogged = await login(email, password, rememberMe);
+      if(userLogged.role === 'ADMIN') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
+
     } catch (error) {
-      setError('Credenciales inválidas. Por favor intenta de nuevo.');
+      if (error instanceof AxiosError){
+        setError(error.response?.data?.error || error.message);
+      } else if (error instanceof Error){
+        setError(error.message);
+      }else {
+        setError('Ha ocurrido un error inesperado');
+      }
     } finally {
       setIsLoading(false);
     }
   };
+  
   return <div className="relative min-h-screen w-full flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
     <div 
       className="absolute inset-0 bg-cover bg-center z-0" 
@@ -74,15 +84,24 @@ const LoginPage: React.FC = () => {
                 <input id="password" name="password" type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} className="appearance-none block w-full pl-10 pr-3 py-2 border border-white/10 rounded-xl shadow-sm bg-black/30 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/30 transition-all" placeholder="••••••••" />
               </div>
             </div>
+
+            {/*CONEXION DEL CHECKBOX CON EL EVENTO DE RECUERDAME */}
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 border-white/20 bg-black/30 text-gray-500 focus:ring-2 focus:ring-white/30 focus:ring-offset-0 cursor-pointer" />
+                <input 
+                id="remember-me" 
+                name="remember-me" 
+                type="checkbox" 
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 border-white/20 bg-black/30 text-gray-500 focus:ring-2 focus:ring-white/30 focus:ring-offset-0 cursor-pointer" />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-400 cursor-pointer">
                   Recordarme
                 </label>
+
               </div>
               <div className="text-sm">
-                <Link to="#" className="font-medium text-gray-400 hover:text-gray-300">
+                <Link to="/forgot-password" className="font-medium text-gray-400 hover:text-gray-300">
                   ¿Olvidaste tu contraseña?
                 </Link>
               </div>
