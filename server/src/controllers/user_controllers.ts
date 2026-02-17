@@ -5,7 +5,7 @@ export const getUsersWithReservations = async (req: Request, res: Response): Pro
     try {
         const users = await prisma.user.findMany({
             where: {
-                role: "CLIENT" // Solo traemos clientes, no administradores
+                role: {in: ["CLIENT", "ADMIN"]}
             },
             include: {
                 reservation: true // Incluimos sus reservas (nombre según tu schema.prisma)

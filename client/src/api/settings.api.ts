@@ -37,6 +37,11 @@ export interface TermsSettings {
   };
 }
 
+export interface WifiSettings {
+  wifiName: string;
+  wifiPassword: string;
+}
+
 // --- Endpoints de Precios ---
 export const getPricingSettings = async () => {
   return await api.get('/admin/settings/pricing');
@@ -62,4 +67,12 @@ export const getTermsSettings = async () => {
 
 export const updateTermsSettings = async (data: TermsSettings) => {
   return await api.put('/admin/settings/terms', data);
+};
+// --- Endpoints de Wi-Fi ---
+export const getWifiSettings = async () => {
+  return await api.get('/admin/settings/wifi');
+};
+
+export const updateWifiSettings = async (data: WifiSettings) => {
+  return await api.put('/admin/settings/wifi', data);
 };

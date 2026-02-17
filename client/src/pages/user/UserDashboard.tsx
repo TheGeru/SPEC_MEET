@@ -1,106 +1,447 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { CalendarIcon, ClockIcon, KeyIcon, CheckCircleIcon, XCircleIcon, AlertCircleIcon, TagIcon, Loader2 } from 'lucide-react';
+import {
+  CalendarIcon, ClockIcon, KeyIcon, CheckCircleIcon,
+  XCircleIcon, AlertCircleIcon, TagIcon, Loader2,
+  CopyIcon, FileTextIcon, PlusCircleIcon, InfoIcon
+} from 'lucide-react';
 import api from '../../api/axios';
 
+// ─── Tipos ───────────────────────────────────────────────────
 interface Reservation {
-  id: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  accessCode: string;
-  status: string;
-  totalAmount: number;
+  id:           string;
+  date:         string;
+  startTime:    string;
+  endTime:      string;
+  accessCode:   string | null;
+  status:       string;
+  totalAmount:  number;
+  canCancel:    boolean;
+  canExtend:    boolean;
+  invoiceRequested: boolean;
 }
 
 interface DashboardData {
   stats: {
-    activeReservations: number;
-    totalHours: number;
+    activeReservations:  number;
+    totalHours:          number;
     nextReservationDate: string;
   };
   upcoming: Reservation[];
-  past: Reservation[];
+  past:     Reservation[];
 }
 
-const UserDashboard: React.FC = () => {
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
+// ─── Helper: badge de estado (idéntico al original) ──────────
+const getStatusBadge = (status: string) => {
+  switch (status) {
+    case 'PAID':
+    case 'CONFIRMED':
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500 bg-opacity-30 backdrop-blur-sm text-white">
+          <CheckCircleIcon className="w-3 h-3 mr-1" /> Confirmada
+        </span>
+      );
+    case 'PENDING':
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-500 bg-opacity-30 backdrop-blur-sm text-white">
+          <AlertCircleIcon className="w-3 h-3 mr-1" /> Pendiente
+        </span>
+      );
+    case 'COMPLETED':
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500 bg-opacity-30 backdrop-blur-sm text-white">
+          <CheckCircleIcon className="w-3 h-3 mr-1" /> Completada
+        </span>
+      );
+    case 'CANCELLED':
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500 bg-opacity-30 backdrop-blur-sm text-white">
+          <XCircleIcon className="w-3 h-3 mr-1" /> Cancelada
+        </span>
+      );
+    default:
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-500 bg-opacity-30 backdrop-blur-sm text-white">
+          {status}
+        </span>
+      );
+  }
+};
 
-  useEffect(() => {
-    const fetchUserStats = async () => {
-      try {
-        const response = await api.get('/dashboard/user-stats');
-        setData(response.data);
-      } catch (error) {
-        console.error("Error cargando dashboard:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUserStats();
-  }, []);
+// ─── Modal: Ver Detalles ──────────────────────────────────────
+const DetailsModal: React.FC<{ reservation: Reservation; onClose: () => void }> = ({ reservation, onClose }) => {
+  const [copied, setCopied] = useState(false);
 
-  const getStatusBadge = (status: string) => {
-    // Normalizamos status de la BD
-    switch (status) {
-      case 'PAID':
-      case 'CONFIRMED':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500 bg-opacity-30 backdrop-blur-sm text-white">
-            <CheckCircleIcon className="w-3 h-3 mr-1" />
-            Confirmada
-          </span>
-        );
-      case 'PENDING':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-500 bg-opacity-30 backdrop-blur-sm text-white">
-            <AlertCircleIcon className="w-3 h-3 mr-1" />
-            Pendiente
-          </span>
-        );
-      case 'COMPLETED':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500 bg-opacity-30 backdrop-blur-sm text-white">
-            <CheckCircleIcon className="w-3 h-3 mr-1" />
-            Completada
-          </span>
-        );
-      case 'CANCELLED':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500 bg-opacity-30 backdrop-blur-sm text-white">
-            <XCircleIcon className="w-3 h-3 mr-1" />
-            Cancelada
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-500 bg-opacity-30 backdrop-blur-sm text-white">
-            {status}
-          </span>
-        );
+  const copyCode = () => {
+    if (reservation.accessCode) {
+      navigator.clipboard.writeText(reservation.accessCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="w-full min-h-screen flex items-center justify-center bg-black">
-        <Loader2 className="h-10 w-10 text-white animate-spin" />
-      </div>
-    );
-  }
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+      <div className="bg-zinc-900 border border-white/10 rounded-xl max-w-sm w-full p-6 shadow-2xl">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-lg font-semibold text-white">Detalle de Reserva</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition">
+            <XCircleIcon className="h-5 w-5" />
+          </button>
+        </div>
 
-  // Datos seguros por defecto
-  const stats = data?.stats || { activeReservations: 0, totalHours: 0, nextReservationDate: '--' };
+        <div className="space-y-3 mb-5">
+          <div className="flex items-center gap-2">
+            <CalendarIcon className="h-4 w-4 text-gray-400 shrink-0" />
+            <span className="text-white text-sm">
+              {new Date(reservation.date).toLocaleDateString('es-ES', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+              })}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <ClockIcon className="h-4 w-4 text-gray-400 shrink-0" />
+            <span className="text-white text-sm">{reservation.startTime} – {reservation.endTime}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <InfoIcon className="h-4 w-4 text-gray-400 shrink-0" />
+            <span className="text-white text-sm">Estado: </span>
+            {getStatusBadge(reservation.status)}
+          </div>
+          <div className="flex items-center gap-2">
+            <TagIcon className="h-4 w-4 text-gray-400 shrink-0" />
+            <span className="text-white text-sm font-bold">${reservation.totalAmount.toFixed(2)} MXN</span>
+          </div>
+        </div>
+
+        {/* Código de acceso */}
+        {reservation.accessCode && (reservation.status === 'CONFIRMED' || reservation.status === 'PAID') && (
+          <div className="bg-white/5 border border-white/10 rounded-lg p-4 mb-4">
+            <p className="text-xs text-gray-400 mb-2 flex items-center gap-1">
+              <KeyIcon className="h-3 w-3" /> Código de Acceso
+            </p>
+            <div className="flex items-center justify-between gap-3">
+              <span className="font-mono font-bold text-2xl text-white tracking-widest">
+                {reservation.accessCode}
+              </span>
+              <button
+                onClick={copyCode}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs rounded-lg border border-white/10 transition-all"
+              >
+                <CopyIcon className="h-3.5 w-3.5" />
+                {copied ? '¡Copiado!' : 'Copiar'}
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Válido únicamente durante tu horario reservado.
+            </p>
+          </div>
+        )}
+
+        <button
+          onClick={onClose}
+          className="w-full py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm border border-white/10 transition-all"
+        >
+          Cerrar
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ─── Modal: Cancelar ─────────────────────────────────────────
+const CancelModal: React.FC<{
+  reservation: Reservation;
+  onConfirm: () => void;
+  onClose: () => void;
+  loading: boolean;
+}> = ({ reservation, onConfirm, onClose, loading }) => (
+  <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+    <div className="bg-zinc-900 border border-white/10 rounded-xl max-w-sm w-full p-6 shadow-2xl">
+      <h3 className="text-lg font-semibold text-white mb-2">¿Cancelar reserva?</h3>
+      <p className="text-gray-400 text-sm mb-1">
+        {new Date(reservation.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+        {' · '}{reservation.startTime} – {reservation.endTime}
+      </p>
+      <div className="bg-yellow-900/20 border border-yellow-700/30 rounded-lg p-3 my-4">
+        <p className="text-yellow-300 text-xs">
+          El reembolso depende del tiempo de anticipación según los Términos y Condiciones.
+        </p>
+      </div>
+      <div className="flex gap-3">
+        <button
+          onClick={onClose}
+          className="flex-1 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm border border-white/10 transition-all"
+        >
+          Mantener
+        </button>
+        <button
+          onClick={onConfirm}
+          disabled={loading}
+          className="flex-1 py-2 bg-red-700/70 hover:bg-red-700 text-white rounded-lg text-sm font-medium border border-red-600/30 transition-all disabled:opacity-50"
+        >
+          {loading ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Sí, cancelar'}
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+// ─── Modal: Extender ─────────────────────────────────────────
+const ExtendModal: React.FC<{
+  reservation: Reservation;
+  onConfirm: (hours: number) => void;
+  onClose: () => void;
+  loading: boolean;
+}> = ({ reservation, onConfirm, onClose, loading }) => {
+  const [hours, setHours] = useState(1);
+  const newEnd = new Date(`1970-01-01T${reservation.endTime}`);
+  newEnd.setHours(newEnd.getHours() + hours);
+  const newEndStr = newEnd.toTimeString().slice(0, 5);
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+      <div className="bg-zinc-900 border border-white/10 rounded-xl max-w-sm w-full p-6 shadow-2xl">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">Extender Reserva</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <XCircleIcon className="h-5 w-5" />
+          </button>
+        </div>
+        <p className="text-gray-400 text-sm mb-1">Hora actual de salida: <span className="text-white font-medium">{reservation.endTime}</span></p>
+        <div className="flex gap-2 my-4">
+          {[1, 2, 3].map(h => (
+            <button
+              key={h} onClick={() => setHours(h)}
+              className={`flex-1 py-3 rounded-lg text-sm font-bold border transition-all ${
+                hours === h
+                  ? 'bg-white/20 border-white/30 text-white'
+                  : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
+              }`}
+            >
+              +{h} hr{h > 1 ? 's' : ''}
+            </button>
+          ))}
+        </div>
+        <p className="text-gray-400 text-sm mb-4">Nueva hora de salida: <span className="text-white font-medium">{newEndStr}</span></p>
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm border border-white/10 transition-all"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => onConfirm(hours)}
+            disabled={loading}
+            className="flex-1 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium border border-white/20 transition-all disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Confirmar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Modal: Solicitar Factura ─────────────────────────────────
+const InvoiceModal: React.FC<{
+  reservation: Reservation;
+  onConfirm: (data: InvoiceForm) => void;
+  onClose: () => void;
+  loading: boolean;
+}> = ({ reservation, onConfirm, onClose, loading }) => {
+  const [form, setForm] = useState({ rfc: '', razon_social: '', uso_cfdi: 'G03', email_factura: '' });
+  const [err, setErr] = useState('');
+
+  const handleSubmit = () => {
+    if (!form.rfc.trim() || !form.razon_social.trim() || !form.email_factura.trim()) {
+      setErr('RFC, Razón Social y Email son obligatorios');
+      return;
+    }
+    setErr('');
+    onConfirm(form);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+      <div className="bg-zinc-900 border border-white/10 rounded-xl max-w-sm w-full p-6 shadow-2xl">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">Solicitar Factura</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <XCircleIcon className="h-5 w-5" />
+          </button>
+        </div>
+        <p className="text-gray-400 text-xs mb-4">
+          Reserva del {new Date(reservation.date).toLocaleDateString('es-ES')} · ${reservation.totalAmount.toFixed(2)} MXN
+        </p>
+        <div className="space-y-3 mb-4">
+          {[
+            { label: 'RFC *', key: 'rfc', placeholder: 'XAXX010101000' },
+            { label: 'Razón Social *', key: 'razon_social', placeholder: 'Nombre o empresa' },
+            { label: 'Email para factura *', key: 'email_factura', placeholder: 'facturacion@empresa.com' },
+          ].map(f => (
+            <div key={f.key}>
+              <label className="block text-xs text-gray-400 mb-1">{f.label}</label>
+              <input
+                type="text" placeholder={f.placeholder}
+                value={(form as any)[f.key]}
+                onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-white/30"
+              />
+            </div>
+          ))}
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Uso CFDI</label>
+            <select
+              value={form.uso_cfdi}
+              onChange={e => setForm(p => ({ ...p, uso_cfdi: e.target.value }))}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-white/30"
+            >
+              <option value="G03">G03 – Gastos en general</option>
+              <option value="S01">S01 – Sin efectos fiscales</option>
+              <option value="D10">D10 – Servicios educativos</option>
+            </select>
+          </div>
+        </div>
+        {err && <p className="text-red-400 text-xs mb-3">{err}</p>}
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm border border-white/10 transition-all"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="flex-1 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium border border-white/20 transition-all disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Solicitar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface InvoiceForm {
+  rfc: string; razon_social: string; uso_cfdi: string; email_factura: string;
+}
+
+// ─── Toast ───────────────────────────────────────────────────
+const Toast: React.FC<{ msg: string; type: 'success' | 'error'; onClose: () => void }> = ({ msg, type, onClose }) => (
+  <div className={`fixed bottom-5 right-5 z-50 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium shadow-2xl border backdrop-blur-sm
+    ${type === 'success' ? 'bg-green-900/80 border-green-700/50 text-green-200' : 'bg-red-900/80 border-red-700/50 text-red-200'}`}>
+    {type === 'success' ? <CheckCircleIcon className="h-4 w-4" /> : <AlertCircleIcon className="h-4 w-4" />}
+    {msg}
+    <button onClick={onClose}><XCircleIcon className="h-4 w-4 opacity-60 hover:opacity-100" /></button>
+  </div>
+);
+
+// ─── Componente Principal ─────────────────────────────────────
+const UserDashboard: React.FC = () => {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab]   = useState<'upcoming' | 'past'>('upcoming');
+  const [data, setData]             = useState<DashboardData | null>(null);
+  const [loading, setLoading]       = useState(true);
+
+  // Modales activos
+  const [detailRes, setDetailRes]   = useState<Reservation | null>(null);
+  const [cancelRes, setCancelRes]   = useState<Reservation | null>(null);
+  const [extendRes, setExtendRes]   = useState<Reservation | null>(null);
+  const [invoiceRes, setInvoiceRes] = useState<Reservation | null>(null);
+
+  // Loading por acción
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Toast
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  // ── Fetch datos del dashboard ──────────────────────────────
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/dashboard/user-stats');
+      setData(response.data);
+    } catch (error) {
+      console.error('Error cargando dashboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  // ── Cancelar reserva ───────────────────────────────────────
+  const handleCancel = async () => {
+    if (!cancelRes) return;
+    try {
+      setActionLoading(true);
+      await api.patch(`/user/reservations/${cancelRes.id}/cancel`);
+      showToast('Reserva cancelada. Revisa tu email para el reembolso.');
+      setCancelRes(null);
+      fetchData();
+    } catch (err: any) {
+      showToast(err.response?.data?.error || 'Error al cancelar', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // ── Extender reserva ───────────────────────────────────────
+  const handleExtend = async (hours: number) => {
+    if (!extendRes) return;
+    try {
+      setActionLoading(true);
+      await api.patch(`/user/reservations/${extendRes.id}/extend`, { additionalHours: hours });
+      showToast(`Reserva extendida ${hours} hora${hours > 1 ? 's' : ''} correctamente.`);
+      setExtendRes(null);
+      fetchData();
+    } catch (err: any) {
+      showToast(err.response?.data?.error || 'No se puede extender. Puede haber otra reserva próxima.', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // ── Solicitar factura ──────────────────────────────────────
+  const handleInvoice = async (form: InvoiceForm) => {
+    if (!invoiceRes) return;
+    try {
+      setActionLoading(true);
+      await api.post(`/user/reservations/${invoiceRes.id}/invoice`, form);
+      showToast('Solicitud enviada. Recibirás tu factura por email.');
+      setInvoiceRes(null);
+      fetchData();
+    } catch (err: any) {
+      showToast(err.response?.data?.error || 'Error al solicitar factura', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // ── Loading ────────────────────────────────────────────────
+  if (loading) return (
+    <div className="w-full min-h-screen flex items-center justify-center bg-black">
+      <Loader2 className="h-10 w-10 text-white animate-spin" />
+    </div>
+  );
+
+  const stats                = data?.stats    || { activeReservations: 0, totalHours: 0, nextReservationDate: '--' };
   const upcomingReservations = data?.upcoming || [];
-  const pastReservations = data?.past || [];
+  const pastReservations     = data?.past     || [];
 
   return (
     <div className="w-full min-h-screen relative">
-      {/* Background Image */}
+
+      {/* ── Background (idéntico al original) ── */}
       <div
         className="fixed inset-0 bg-cover bg-center z-0"
         style={{
@@ -108,10 +449,12 @@ const UserDashboard: React.FC = () => {
           backgroundSize: 'cover',
           backgroundPosition: 'center center'
         }}
-      ></div>
+      />
 
-      {/* Content */}
+      {/* ── Content ── */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+        {/* Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-black">Mi Panel</h1>
           <p className="text-black mt-2">
@@ -119,7 +462,7 @@ const UserDashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* Compact Info Cards */}
+        {/* ── Stats Cards (idénticas al original) ── */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-4 border border-white border-opacity-10 shadow-lg">
             <div className="flex items-center">
@@ -156,13 +499,16 @@ const UserDashboard: React.FC = () => {
           </div>
         </div>
 
+        {/* ── Panel principal (idéntico al original) ── */}
         <div className="bg-black bg-opacity-40 backdrop-blur-sm rounded-lg shadow-lg mb-8 border border-white border-opacity-10">
+
+          {/* Tabs + botones de navegación */}
           <div className="border-b border-white border-opacity-10 px-6 py-4 flex justify-between items-center">
             <div className="flex flex-wrap gap-4">
               <button
                 className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
                   activeTab === 'upcoming'
-                    ? 'bg-white bg-opacity-10 backdrop-blur-sm border border-white border-opacity-10 shadow-lg text-white'
+                    ? 'bg-white bg-opacity-20 backdrop-blur-sm border border-white border-opacity-20 shadow-lg text-white'
                     : 'bg-white bg-opacity-10 backdrop-blur-sm border border-white border-opacity-10 shadow-lg text-white hover:bg-opacity-20'
                 }`}
                 onClick={() => setActiveTab('upcoming')}
@@ -172,7 +518,7 @@ const UserDashboard: React.FC = () => {
               <button
                 className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
                   activeTab === 'past'
-                    ? 'bg-white bg-opacity-10 backdrop-blur-sm border border-white border-opacity-10 shadow-lg text-white'
+                    ? 'bg-white bg-opacity-20 backdrop-blur-sm border border-white border-opacity-20 shadow-lg text-white'
                     : 'bg-white bg-opacity-10 backdrop-blur-sm border border-white border-opacity-10 shadow-lg text-white hover:bg-opacity-20'
                 }`}
                 onClick={() => setActiveTab('past')}
@@ -199,6 +545,8 @@ const UserDashboard: React.FC = () => {
           </div>
 
           <div className="p-6">
+
+            {/* ── Tab: Próximas Reservas ── */}
             {activeTab === 'upcoming' ? (
               <div>
                 <h3 className="text-xl font-semibold text-white mb-4">Próximas Reservas</h3>
@@ -225,10 +573,7 @@ const UserDashboard: React.FC = () => {
                               <CalendarIcon className="h-5 w-5 text-white mr-2" />
                               <span className="text-white font-medium">
                                 {new Date(reservation.date).toLocaleDateString('es-ES', {
-                                  weekday: 'long',
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric'
+                                  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
                                 })}
                               </span>
                             </div>
@@ -238,40 +583,64 @@ const UserDashboard: React.FC = () => {
                                 {reservation.startTime} - {reservation.endTime}
                               </span>
                             </div>
-                            <div className="flex items-center mb-2">
-                              <KeyIcon className="h-5 w-5 text-white mr-2" />
-                              <span className="text-white">
-                                Código de acceso:{' '}
-                                <span className="font-mono font-bold tracking-wider bg-white/10 px-2 py-0.5 rounded">
-                                  {reservation.accessCode}
+                            {reservation.accessCode && (
+                              <div className="flex items-center mb-2">
+                                <KeyIcon className="h-5 w-5 text-white mr-2" />
+                                <span className="text-white">
+                                  Código de acceso:{' '}
+                                  <span className="font-mono font-bold tracking-wider bg-white/10 px-2 py-0.5 rounded">
+                                    {reservation.accessCode}
+                                  </span>
                                 </span>
-                              </span>
-                            </div>
+                              </div>
+                            )}
                             <div className="mt-2">{getStatusBadge(reservation.status)}</div>
                           </div>
-                          
-                          {/* SECCIÓN DERECHA: SOLO PRECIO (Recursos eliminados) */}
+
+                          {/* Precio */}
                           <div className="text-right flex flex-col justify-between h-full">
                             <div className="mt-auto">
-                                <p className="text-gray-300 text-xs uppercase tracking-wide mb-1">Total Pagado</p>
-                                <p className="text-white font-bold text-xl">
+                              <p className="text-gray-300 text-xs uppercase tracking-wide mb-1">Total Pagado</p>
+                              <p className="text-white font-bold text-xl">
                                 ${reservation.totalAmount.toFixed(2)} MXN
-                                </p>
+                              </p>
                             </div>
                           </div>
                         </div>
 
+                        {/* Botones de acción */}
                         <div className="mt-4 flex flex-wrap gap-2">
-                          <button className="px-3 py-1 bg-white bg-opacity-15 hover:bg-opacity-30 text-white text-sm rounded-md backdrop-blur-sm border border-white border-opacity-20 transition-all">
+                          <button
+                            onClick={() => setDetailRes(reservation)}
+                            className="px-3 py-1 bg-white bg-opacity-15 hover:bg-opacity-30 text-white text-sm rounded-md backdrop-blur-sm border border-white border-opacity-20 transition-all"
+                          >
                             Ver Detalles
                           </button>
+                           {/*{reservation.canExtend && (
+                            <button
+                              onClick={() => setExtendRes(reservation)}
+                              className="inline-flex items-center gap-1 px-3 py-1 bg-white bg-opacity-15 hover:bg-opacity-30 text-white text-sm rounded-md backdrop-blur-sm border border-white border-opacity-20 transition-all"
+                            >
+                              <PlusCircleIcon className="h-3.5 w-3.5" /> Extender
+                            </button>
+                          )}*/}
+                          {reservation.canCancel && (
+                            <button
+                              onClick={() => setCancelRes(reservation)}
+                              className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-white text-sm rounded-md backdrop-blur-sm border border-red-400/20 transition-all"
+                            >
+                              Cancelar
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
+
             ) : (
+              /* ── Tab: Historial ── */
               <div>
                 <h3 className="text-xl font-semibold text-white mb-4">Historial de Reservas</h3>
                 {pastReservations.length === 0 ? (
@@ -291,10 +660,7 @@ const UserDashboard: React.FC = () => {
                               <CalendarIcon className="h-5 w-5 text-white mr-2" />
                               <span className="text-white font-medium">
                                 {new Date(reservation.date).toLocaleDateString('es-ES', {
-                                  weekday: 'long',
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric'
+                                  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
                                 })}
                               </span>
                             </div>
@@ -306,8 +672,8 @@ const UserDashboard: React.FC = () => {
                             </div>
                             <div className="mt-2">{getStatusBadge(reservation.status)}</div>
                           </div>
-                          
-                          {/* SECCIÓN DERECHA: SOLO PRECIO (Recursos eliminados) */}
+
+                          {/* Precio */}
                           <div className="text-right mt-2 sm:mt-0">
                             <p className="text-gray-300 text-xs uppercase tracking-wide mb-1">Total</p>
                             <p className="text-white font-bold text-lg">
@@ -315,15 +681,28 @@ const UserDashboard: React.FC = () => {
                             </p>
                           </div>
                         </div>
+
+                        {/* Botones de acción */}
                         <div className="mt-4 flex flex-wrap gap-2">
-                          <button className="px-3 py-1 bg-white bg-opacity-15 hover:bg-opacity-30 text-white text-sm rounded-md backdrop-blur-sm border border-white border-opacity-20 transition-all">
+                          <button
+                            onClick={() => setDetailRes(reservation)}
+                            className="px-3 py-1 bg-white bg-opacity-15 hover:bg-opacity-30 text-white text-sm rounded-md backdrop-blur-sm border border-white border-opacity-20 transition-all"
+                          >
                             Ver Detalles
                           </button>
-                          {reservation.status === 'COMPLETED' || reservation.status === 'PAID' ? (
-                             <button className="px-3 py-1 bg-white bg-opacity-15 hover:bg-opacity-30 text-white text-sm rounded-md backdrop-blur-sm border border-white border-opacity-20 transition-all">
-                               Solicitar Factura
-                             </button>
-                          ) : null}
+                          {(reservation.status === 'COMPLETED' || reservation.status === 'CONFIRMED' || reservation.status === 'PAID') && !reservation.invoiceRequested && (
+                            <button
+                              onClick={() => setInvoiceRes(reservation)}
+                              className="inline-flex items-center gap-1 px-3 py-1 bg-white bg-opacity-15 hover:bg-opacity-30 text-white text-sm rounded-md backdrop-blur-sm border border-white border-opacity-20 transition-all"
+                            >
+                              <FileTextIcon className="h-3.5 w-3.5" /> Solicitar Factura
+                            </button>
+                          )}
+                          {reservation.invoiceRequested && (
+                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-500/10 text-green-300 text-sm rounded-md border border-green-500/20">
+                              <CheckCircleIcon className="h-3.5 w-3.5" /> Factura solicitada
+                            </span>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -334,6 +713,15 @@ const UserDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Modales ── */}
+      {detailRes  && <DetailsModal reservation={detailRes}  onClose={() => setDetailRes(null)} />}
+      {cancelRes  && <CancelModal  reservation={cancelRes}  onConfirm={handleCancel}           onClose={() => setCancelRes(null)}  loading={actionLoading} />}
+      {extendRes  && <ExtendModal  reservation={extendRes}  onConfirm={handleExtend}           onClose={() => setExtendRes(null)}  loading={actionLoading} />}
+      {invoiceRes && <InvoiceModal reservation={invoiceRes} onConfirm={handleInvoice}          onClose={() => setInvoiceRes(null)} loading={actionLoading} />}
+
+      {/* ── Toast ── */}
+      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 };
