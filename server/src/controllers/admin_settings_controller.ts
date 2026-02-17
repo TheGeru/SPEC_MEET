@@ -212,3 +212,56 @@ export const updateTermsSettings = async (req: Request, res: Response): Promise<
         res.status(500).json({ error: "Error guardando términos" });
     }
 };
+
+// ==========================================
+// 4. GESTIÓN DE WI-FI
+// ==========================================
+
+export const getWifiSettings = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // Obtenemos la configuración Wi-Fi de la primera sala
+        const room = await prisma.room.findFirst();
+        
+        res.json({
+            wifiName: room?.wifi_ssid || "",
+            wifiPassword: room?.wifi_pass || ""
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error al obtener configuración Wi-Fi" });
+    }
+};
+
+export const updateWifiSettings = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { wifiName, wifiPassword } = req.body;
+
+        // Validación básica
+        if (!wifiName || wifiName.trim() === "") {
+            res.status(400).json({ error: "El nombre de Wi-Fi es obligatorio" });
+            return;
+        }
+
+        // Buscar la primera sala
+        const room = await prisma.room.findFirst();
+        
+        if (!room) {
+            res.status(404).json({ error: "No se encontró ninguna sala configurada" });
+            return;
+        }
+
+        // Actualizar configuración Wi-Fi
+        await prisma.room.update({
+            where: { id: room.id },
+            data: {
+               wifi_ssid: wifiName,
+                wifi_pass: wifiPassword || null
+            }
+        });
+
+        res.json({ message: "Configuración Wi-Fi actualizada correctamente" });
+    } catch (error) {
+        console.error("Error updating Wi-Fi settings:", error);
+        res.status(500).json({ error: "Error al guardar configuración Wi-Fi" });
+    }
+};

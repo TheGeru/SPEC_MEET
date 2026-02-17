@@ -10,7 +10,9 @@ import {
   getPricingSettings, updatePricingSettings, 
   getLocationSettings, updateLocationSettings,
   getTermsSettings, updateTermsSettings,
-  type PricingSettings,type LocationSettings, type TermsSettings 
+  getWifiSettings, updateWifiSettings,
+  type PricingSettings,type LocationSettings, type TermsSettings,
+  type WifiSettings
 } from '../../api/settings.api';
 
 // Mantenemos las interfaces locales para el estado del componente
@@ -52,10 +54,15 @@ const AdminSettings: React.FC = () => {
   const [savingPricing, setSavingPricing] = useState(false);
   const [savingLocation, setSavingLocation] = useState(false);
   const [savingTerms, setSavingTerms] = useState(false);
+  const [savingWifi, setSavingWifi] = useState(false); // ← AÑADIDO
 
   const [showPreview, setShowPreview] = useState(false);
   
   // --- ESTADOS DE DATOS ---
+  const [wifiSettings, setWifiSettings] = useState<WifiSettings>({
+    wifiName: '',
+    wifiPassword: ''
+  });
 
   const [pricingSettings, setPricingSettings] = useState<PricingSettings>({
     hourlyRate: 0,
@@ -91,10 +98,11 @@ const AdminSettings: React.FC = () => {
       setLoading(true);
       try {
         // Ejecutamos las peticiones en paralelo
-        const [pricingRes, locationRes, termsRes] = await Promise.allSettled([
+        const [pricingRes, locationRes, termsRes, wifiRes] = await Promise.allSettled([
           getPricingSettings(),
           getLocationSettings(),
-          getTermsSettings()
+          getTermsSettings(),
+          getWifiSettings() // ← AÑADIDO
         ]);
 
         // Procesar Precios
@@ -123,6 +131,11 @@ const AdminSettings: React.FC = () => {
           setTermsSettings(termsRes.value.data);
         }
 
+        // Procesar Wi-Fi ← AÑADIDO
+        if (wifiRes.status === 'fulfilled') {
+          setWifiSettings(wifiRes.value.data);
+        }
+
       } catch (err) {
         setError('Error general al cargar la configuración.');
         console.error(err);
@@ -136,6 +149,19 @@ const AdminSettings: React.FC = () => {
 
   // --- FUNCIONES DE GUARDADO INDEPENDIENTES ---
 
+  const handleSaveWifi = async () => {
+    setSavingWifi(true);
+    try {
+      await updateWifiSettings(wifiSettings);
+      alert('Configuración Wi-Fi guardada correctamente');
+    } catch (error) {
+      console.error('Error saving wifi settings:', error);
+      alert('Error al guardar configuración Wi-Fi');
+    } finally {
+      setSavingWifi(false);
+    }
+  };
+  
   const handleSavePricing = async () => {
     setSavingPricing(true);
     try {
@@ -189,8 +215,8 @@ const AdminSettings: React.FC = () => {
       .replace(/{LOCATION_NAME}/g, locationSettings.name)
       .replace(/{LOCATION_ADDRESS}/g, locationSettings.address)
       .replace(/{CAPACITY}/g, `${locationSettings.capacity} personas`)
-      // Nota: WiFi name está en resources (que es mock), pero lo conectamos igual
-      .replace(/{WIFI_NETWORK}/g, resourcesSettings.wifiSettings.networkName || "Invitados");
+      // ← CORREGIDO: Ahora usa wifiSettings del backend
+      .replace(/{WIFI_NETWORK}/g, wifiSettings.wifiName || "Invitados");
     
     // Lista de paquetes
     const packagesList = pricingSettings.packages
@@ -354,66 +380,68 @@ const AdminSettings: React.FC = () => {
   };
 
   const renderResourcesSettings = () => {
-  return (
-    <div className="space-y-8 pb-10">
-      <div className="bg-zinc-800 rounded-lg p-6">
-        <h3 className="text-lg font-medium text-white mb-4">Configuración Wi-Fi</h3>
-        <p className="text-sm text-gray-400 mb-6">
-          Esta información se utiliza para la variable {"{WIFI_NETWORK}"} en tus Términos y Condiciones.
-        </p>
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="networkName" className="block text-sm font-medium text-gray-300 mb-1">
-              Nombre de Red (SSID)
-            </label>
-            <div className="relative rounded-md shadow-sm">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <WifiIcon className="h-5 w-5 text-gray-400" />
+    return (
+      <div className="space-y-8 pb-10">
+        <div className="bg-zinc-800 rounded-lg p-6">
+          <h3 className="text-lg font-medium text-white mb-4">Configuración Wi-Fi</h3>
+          <p className="text-sm text-gray-400 mb-6">
+            Esta información se utiliza para la variable {"{WIFI_NETWORK}"} en tus Términos y Condiciones.
+          </p>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="networkName" className="block text-sm font-medium text-gray-300 mb-1">
+                Nombre de Red (SSID)
+              </label>
+              <div className="relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <WifiIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  id="networkName"
+                  value={wifiSettings.wifiName}
+                  onChange={e => setWifiSettings(prev => ({
+                    ...prev,
+                    wifiName: e.target.value
+                  }))}
+                  className="bg-zinc-900 block w-full pl-10 py-2 rounded-md border border-zinc-700 text-white focus:ring-purple-500 focus:border-purple-500"
+                  placeholder="Ej: SPEC.MEET_Guest"
+                />
               </div>
+            </div>
+            <div>
+              <label htmlFor="wifiPassword" className="block text-sm font-medium text-gray-300 mb-1">
+                Contraseña
+              </label>
               <input
                 type="text"
-                id="networkName"
-                value={resourcesSettings.wifiSettings.networkName}
-                onChange={e => setResourcesSettings(prev => ({
+                id="wifiPassword"
+                value={wifiSettings.wifiPassword}
+                onChange={e => setWifiSettings(prev => ({
                   ...prev,
-                  wifiSettings: { ...prev.wifiSettings, networkName: e.target.value }
+                  wifiPassword: e.target.value
                 }))}
-                className="bg-zinc-900 block w-full pl-10 py-2 rounded-md border border-zinc-700 text-white focus:ring-purple-500 focus:border-purple-500"
-                placeholder="Ej: SPEC.MEET_Guest"
+                className="bg-zinc-900 block w-full py-2 px-3 rounded-md border border-zinc-700 text-white focus:ring-purple-500 focus:border-purple-500"
+                placeholder="Contraseña de la red (opcional)"
               />
             </div>
           </div>
-          <div>
-            <label htmlFor="wifiPassword" className="block text-sm font-medium text-gray-300 mb-1">
-              Contraseña
-            </label>
-            <input
-              type={resourcesSettings.wifiSettings.showPassword ? 'text' : 'password'}
-              id="wifiPassword"
-              value={resourcesSettings.wifiSettings.password}
-              onChange={e => setResourcesSettings(prev => ({
-                ...prev,
-                wifiSettings: { ...prev.wifiSettings, password: e.target.value }
-              }))}
-              className="bg-zinc-900 block w-full py-2 px-3 rounded-md border border-zinc-700 text-white focus:ring-purple-500 focus:border-purple-500"
-            />
-          </div>
+        </div>
+
+        {/* Botón de guardado para Wi-Fi */}
+        <div className="flex justify-end">
+          <button
+            onClick={handleSaveWifi}
+            disabled={savingWifi}
+            className="inline-flex items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
+          >
+            {savingWifi ? <Loader2 className="animate-spin mr-2 h-4 w-4"/> : <SaveIcon className="mr-2 h-4 w-4"/>}
+            Guardar Wi-Fi
+          </button>
         </div>
       </div>
-
-      {/* Botón de guardado para Wi-Fi (Simulado o conectado a BusinessConfig si prefieres) */}
-      <div className="flex justify-end">
-        <button
-          onClick={() => alert("Configuración Wi-Fi guardada localmente para la vista previa.")}
-          className="inline-flex items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700"
-        >
-          <SaveIcon className="mr-2 h-4 w-4"/>
-          Guardar Wi-Fi
-        </button>
-      </div>
-    </div>
-  );
-};
+    );
+  };
 
   const renderTermsSettings = () => {
     return (
@@ -468,21 +496,20 @@ const AdminSettings: React.FC = () => {
           )}
         </div>
 
-        {/* ... Additional Clauses & Privacy Options (Inputs igual al original) ... */}
         {/* SECCIÓN REINTEGRADA: Cláusulas Adicionales */}
-      <div className="bg-zinc-800 rounded-lg p-6">
-        <h3 className="text-lg font-medium text-white mb-4">Cláusulas Adicionales</h3>
-        <p className="text-sm text-gray-400 mb-3">
-          Este texto se añadirá automáticamente al final de los términos principales.
-        </p>
-        <textarea
-          rows={5}
-          value={termsSettings.additionalClauses}
-          onChange={e => setTermsSettings(prev => ({ ...prev, additionalClauses: e.target.value }))}
-          className="bg-zinc-900 block w-full py-2 px-3 rounded-md border border-zinc-700 text-white text-sm"
-          placeholder="Ej: Políticas de uso de equipo de cómputo, conducta, etc."
-        />
-      </div>
+        <div className="bg-zinc-800 rounded-lg p-6">
+          <h3 className="text-lg font-medium text-white mb-4">Cláusulas Adicionales</h3>
+          <p className="text-sm text-gray-400 mb-3">
+            Este texto se añadirá automáticamente al final de los términos principales.
+          </p>
+          <textarea
+            rows={5}
+            value={termsSettings.additionalClauses}
+            onChange={e => setTermsSettings(prev => ({ ...prev, additionalClauses: e.target.value }))}
+            className="bg-zinc-900 block w-full py-2 px-3 rounded-md border border-zinc-700 text-white text-sm"
+            placeholder="Ej: Políticas de uso de equipo de cómputo, conducta, etc."
+          />
+        </div>
 
          {/* BOTÓN DE GUARDADO ESPECÍFICO DE TÉRMINOS */}
          <div className="flex justify-end pt-4">
