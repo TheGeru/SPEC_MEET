@@ -4,9 +4,11 @@ import { useAuth } from '../../context/AuthContext';
 const PublicRoute = () => {
   const { isAuthenticated, isLoading } = useAuth();
 
-  if (isLoading) return <div className="min-h-screen bg-black" />; // Carga silenciosa
+  if (isLoading) return <div className="min-h-screen bg-white" />;
 
+   // Carga silenciosa
   // Si YA estás autenticado, te manda al Dashboard
+  
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }

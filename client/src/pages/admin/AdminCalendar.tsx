@@ -107,17 +107,18 @@ const AdminCalendar: React.FC = () => {
   };
   return <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-white">
-          Calendario de Reservas
-        </h1>
+        <h1 className="font-makron text-3xl font-bold text-background">Calendario de Reservas</h1>
         <div className="flex space-x-3">
-          <button onClick={() => {
-          setSelectedDate(new Date());
-          setShowBlockModal(true);
-        }} className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-700 hover:bg-gray-600">
-            <LockIcon className="h-4 w-4 mr-2" />
-            Bloquear Horario
-          </button>
+            {isLoading && <Loader className="animate-spin text-primary" />}
+            <button onClick={() => { 
+                setSelectedDate(new Date()); 
+                setBlockEndDate(''); // Reset fecha fin
+                setShowBlockModal(true); 
+            }} 
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-700 hover:bg-gray-600">
+                <LockIcon className="h-4 w-4 mr-2" />
+                Bloquear Horario
+            </button>
         </div>
       </div>
       {/* Calendar navigation */}
