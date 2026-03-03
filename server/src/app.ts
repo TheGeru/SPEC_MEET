@@ -37,7 +37,7 @@ app.use('/api/reservations', reservationRoutes);
 app.use('/api/admin/settings', adminSettingsRoutes);
 
 app.use('/api/admin', usersRoutes);
-
+app.use('/api/reservations', reservationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 app.use('/api/admin/financial', financialrouter);

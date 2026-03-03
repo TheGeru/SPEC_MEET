@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios'; 
 import { AxiosError } from 'axios';
-import { CalendarIcon, ClockIcon, CreditCardIcon, CheckIcon } from 'lucide-react';
+import { CalendarIcon, ClockIcon, CreditCardIcon, CheckIcon, AlertCircle } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
@@ -11,6 +11,14 @@ const stripePromise = loadStripe("pk_test_51SuGE6R7CcXcMDYUm8apqxqrXheiJOYSBHT6D
 
 type BookingStep = 'date' | 'payment' | 'confirmation';
 type PaymentMethod = 'card' | 'applepay' | 'googlepay' | 'spei';
+
+// Definimos la interfaz para los eventos del calendario
+interface CalendarEvent {
+    start: Date;
+    end: Date;
+    type: 'RESERVATION' | 'MY_RESERVATION' | 'BLOCK'; 
+    reason?: string;
+}
 
 // --- COMPONENTE CHECKOUT FORM ---
 const CheckoutForm = ({ totalAmount, onSuccess, onError }: { totalAmount: number, onSuccess: () => void, onError: (msg: string) => void }) => {
@@ -74,13 +82,16 @@ const BookingPage: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
   const [currentCalendarMonth, setCurrentCalendarMonth] = useState(new Date());
   
-  // Estado para reservas existentes (de otros)
-  const [existingReservations, setExistingReservations] = useState<{start: Date, end: Date}[]>([]);
-  // Estado para MIS reservas (azul)
+  // Estado para reservas existentes (de otros y bloqueos)
+  const [existingReservations, setExistingReservations] = useState<CalendarEvent[]>([]);
+  // Estado para MIS reservas (solo fechas para el calendario mensual)
   const [myBookedDates, setMyBookedDates] = useState<string[]>([]);
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState('');
+  
+  // NUEVO: Estado para mostrar alerta de mantenimiento
+  const [maintenanceAlert, setMaintenanceAlert] = useState<string>('');
 
 
   // 1. CARGAR SALA
@@ -99,11 +110,6 @@ const BookingPage: React.FC = () => {
     fetchRoom();
   }, []);
 
-  interface ReservationResponse {
-    start_time: string;
-    end_time: string;
-  }
-
   // 2. CARGAR RESERVAS DEL DÍA SELECCIONADO
   React.useEffect(() => {
     const fetchReservations = async () => {
@@ -112,22 +118,37 @@ const BookingPage: React.FC = () => {
         try {
             const response = await api.get(`/reservations?roomId=${roomId}&date=${selectedDate}`);
             
-            const data = response.data as ReservationResponse[];
-            const formattedReservations = data.map((res) => ({
-                start: new Date(res.start_time),
-                end: new Date(res.end_time)
+            // Mapeamos la respuesta del backend a nuestra interfaz CalendarEvent
+            const data = response.data.map((res: any) => ({
+                start: new Date(res.start),
+                end: new Date(res.end),
+                type: res.type,
+                reason: res.reason
             }));
             
-            setExistingReservations(formattedReservations);
+            setExistingReservations(data);
+            
+            // NUEVO: Verificar si hay bloqueos de día completo
+            const hasFullDayBlock = data.some((event: CalendarEvent) => 
+                event.type === 'BLOCK' && 
+                new Date(event.start).getHours() === 0 && 
+                new Date(event.end).getHours() === 23
+            );
+            
+            if (hasFullDayBlock) {
+                setMaintenanceAlert('Este día está completamente bloqueado por mantenimiento.');
+            } else {
+                setMaintenanceAlert('');
+            }
+            
         } catch (error) {
             console.error("Error cargando horarios ocupados:", error);
         }
     };
-
     fetchReservations();
   }, [selectedDate, roomId]);
 
-  // 3. CARGAR "MIS RESERVAS" PARA EL CALENDARIO
+  // 3. CARGAR "MIS RESERVAS" PARA EL CALENDARIO MENSUAL
   React.useEffect(() => {
     const fetchMyBookings = async () => {
         try {
@@ -239,32 +260,65 @@ const BookingPage: React.FC = () => {
     return days;
   };
 
-  const hasDayReservations = (day: Date) => {
+  // CORREGIDO: Verificar si un día tiene bloqueos de mantenimiento
+  const hasDayMaintenance = (day: Date) => {
     const calendarStr = day.toISOString().split('T')[0];
     return existingReservations.some(r => {
       const reservationDateStr = r.start.toISOString().split('T')[0];
-      return reservationDateStr === calendarStr;
+      return reservationDateStr === calendarStr && r.type === 'BLOCK';
     });
   };
 
-  const isTimeSlotAvailable = (dateStr: string, timeStr: string) => {
-    if (existingReservations.length === 0) return true;
+  // --- FUNCIÓN CLAVE CORREGIDA: isTimeSlotAvailable CON LOGICA DE COLORES Y BUFFERS ---
+  const isTimeSlotAvailable = useCallback((dateStr: string, timeStr: string) => {
+    if (existingReservations.length === 0) return { available: true, type: null };
 
     const proposedStart = new Date(`${dateStr}T${timeStr}:00`);
     const proposedEnd = new Date(proposedStart);
     proposedEnd.setHours(proposedEnd.getHours() + selectedDuration);
 
-    const CLEANING_TIME_MS = 30 * 60 * 1000; 
+    const CLEANING_MS = 30 * 60 * 1000;      // 30 min después de Reservas
+    const MAINTENANCE_MS = 15 * 60 * 1000;   // 15 min después de Mantenimiento
 
-    return !existingReservations.some(reservation => {
-        const busyStart = reservation.start.getTime(); 
-        const busyEnd = reservation.end.getTime() + CLEANING_TIME_MS; 
-        return (
-            proposedStart.getTime() < busyEnd && 
-            proposedEnd.getTime() > busyStart
-        );
+    const conflict = existingReservations.find(reservation => {
+        const busyStart = reservation.start.getTime();
+        let busyEnd = reservation.end.getTime();
+
+        // Aplicamos buffer DESPUÉS de la reserva/bloqueo
+        if (reservation.type === 'BLOCK') {
+            busyEnd += MAINTENANCE_MS; // Buffer de 15 min después del bloqueo
+        } else if (reservation.type === 'RESERVATION') {
+            busyEnd += CLEANING_MS; // Buffer de 30 min después de otras reservas
+        } else if (reservation.type === 'MY_RESERVATION') {
+            busyEnd += CLEANING_MS; // Buffer de 30 min después de mis reservas
+        }
+
+        // Lógica de colisión: mi inicio debe ser >= busyEnd, mi fin debe ser <= busyStart
+        return (proposedStart.getTime() < busyEnd && proposedEnd.getTime() > busyStart);
     });
-  };
+
+    if (conflict) {
+        return { 
+            available: false, 
+            type: conflict.type, 
+            reason: conflict.reason 
+        };
+    }
+
+    return { available: true, type: null };
+  }, [existingReservations, selectedDuration]);
+
+  // NUEVO: Efecto para validar conflictos cuando cambia hora o duración
+  React.useEffect(() => {
+    if (selectedDate && selectedTimeSlot) {
+      const status = isTimeSlotAvailable(selectedDate, selectedTimeSlot);
+      if (!status.available && status.type === 'BLOCK') {
+        setMaintenanceAlert(`Horario no disponible por mantenimiento programado${status.reason ? ': ' + status.reason : ''}`);
+      } else {
+        setMaintenanceAlert('');
+      }
+    }
+  }, [selectedTimeSlot, selectedDuration, selectedDate, isTimeSlotAvailable]);
 
 
   // --- HANDLERS (NAVEGACION Y ACCIONES) ---
@@ -272,6 +326,17 @@ const BookingPage: React.FC = () => {
   const handleNextStep = async () => {
     if (currentStep === 'date') {
       if (!selectedDate || !selectedTimeSlot) return;
+      
+      // VALIDACIÓN ANTICIPADA: Verificar disponibilidad antes de proceder
+      const availability = isTimeSlotAvailable(selectedDate, selectedTimeSlot);
+      if (!availability.available) {
+        if (availability.type === 'BLOCK') {
+          setPaymentError(`Horario no disponible por mantenimiento programado${availability.reason ? ': ' + availability.reason : ''}`);
+        } else {
+          setPaymentError('Horario no disponible. Existe un conflicto con otra reserva.');
+        }
+        return;
+      }
       
       setIsProcessing(true);
       setPaymentError('');
@@ -290,9 +355,7 @@ const BookingPage: React.FC = () => {
           acceptedVersion: "1.0"
         };
 
-        // Enviamos directo con api.post para asegurar compatibilidad con el backend
         const response = await api.post('/reservations', reservationPayload);
-        
         const { clientSecret } = response.data;
 
         if (clientSecret) {
@@ -330,6 +393,24 @@ const BookingPage: React.FC = () => {
 
   // --- RENDERIZADO (VISTAS) ---
 
+  // Leyenda de colores CORREGIDA
+  const renderLegend = () => (
+      <div className="flex flex-wrap gap-4 mb-4 px-2">
+          <div className="flex items-center">
+              <div className="w-3 h-3 bg-white bg-opacity-10 border border-white/20 rounded-sm mr-2"></div>
+              <span className="text-xs text-white/70">Disponible</span>
+          </div>
+          <div className="flex items-center">
+              <div className="w-3 h-3 bg-green-500 rounded-sm mr-2"></div>
+              <span className="text-xs text-white/70">Mis Reservas</span>
+          </div>
+          <div className="flex items-center">
+              <div className="w-3 h-3 bg-red-500 rounded-sm mr-2"></div>
+              <span className="text-xs text-white/70">Mantenimiento</span>
+          </div>
+      </div>
+  );
+
   const renderCalendarView = () => (
     <div>
       <div className="flex justify-between items-center mb-4">
@@ -359,21 +440,23 @@ const BookingPage: React.FC = () => {
             }
             const dateString = day.toISOString().split('T')[0];
             const isSelected = dateString === selectedDate;
-            const hasReservations = hasDayReservations(day);
             const isToday = day.getDate() === new Date().getDate() && day.getMonth() === new Date().getMonth() && day.getFullYear() === new Date().getFullYear();
             const isMyBooking = myBookedDates.includes(dateString);
+            const hasMaintenance = hasDayMaintenance(day);
 
             return (
                 <div 
                     key={day.toString()} 
                     className={`h-20 p-1 rounded-md overflow-hidden cursor-pointer relative border transition-all
                     ${isSelected ? 'bg-white bg-opacity-30 border-white border-opacity-50' : ''}
-                    ${isToday ? 'bg-white bg-opacity-10 border-blue-400 border-opacity-50' : 'bg-white bg-opacity-5 border-transparent'}
+                    ${isToday && !isSelected ? 'bg-white bg-opacity-10 border-blue-400 border-opacity-50' : ''}
+                    ${!isSelected && !isToday ? 'bg-white bg-opacity-5 border-transparent' : ''}
                     ${!isSelected ? 'hover:bg-white hover:bg-opacity-15' : ''}
                     `} 
                     onClick={() => {
                         const dateStr = day.toISOString().split('T')[0];
                         setSelectedDate(dateStr);
+                        setSelectedTimeSlot(''); // Reset time cuando cambia día
                     }}
                 >
                     <div className={`text-right p-1 text-sm ${isToday ? 'font-bold text-blue-300' : 'text-white'}`}>
@@ -382,15 +465,14 @@ const BookingPage: React.FC = () => {
 
                     <div className="flex flex-col gap-1 items-start pl-1">
                         {isMyBooking && (
-                            <div className="px-1.5 py-0.5 text-[10px] bg-blue-500 text-white rounded shadow-sm font-medium w-full truncate">
+                            <div className="px-1.5 py-0.5 text-[10px] bg-green-500 text-white rounded shadow-sm font-medium w-full truncate">
                                 Mi Reserva
                             </div>
                         )}
-
-                        {hasReservations && !isMyBooking && (
+                        {hasMaintenance && !isMyBooking && (
                             <div className="flex items-center gap-1 mt-1">
-                                <div className="w-2 h-2 bg-red-400 rounded-full shadow-sm"></div>
-                                <span className="text-[10px] text-red-200/70 hidden sm:block">Ocupado</span>
+                                <div className="w-2 h-2 bg-red-500 rounded-full shadow-sm"></div>
+                                <span className="text-[10px] text-red-200/70 hidden sm:block">Mantenimiento</span>
                             </div>
                         )}
                     </div>
@@ -404,20 +486,62 @@ const BookingPage: React.FC = () => {
           <h4 className="text-md font-medium text-white mb-3">
             Horarios disponibles para {formatDate(selectedDate)}
           </h4>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-            {getDailyTimeSlots().map(time => {
-                const isAvailable = isTimeSlotAvailable(selectedDate, time);
-                return (
-                    <button key={time} type="button" disabled={!isAvailable} onClick={() => setSelectedTimeSlot(time)} 
-                        className={`py-2 px-3 rounded-md text-center
-                        ${!isAvailable ? 'bg-red-500 bg-opacity-30 text-white cursor-not-allowed' : selectedTimeSlot === time ? 'bg-white bg-opacity-30 text-white' : 'bg-white bg-opacity-10 text-white hover:bg-opacity-20'}
-                        `}>
-                        {time}
-                        {!isAvailable && <div className="text-xs mt-1">Reservado</div>}
-                    </button>
-                );
-            })}
-          </div>
+          
+          {/* NUEVA: Alerta de mantenimiento */}
+          {maintenanceAlert && (
+            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-red-300 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-200">{maintenanceAlert}</p>
+            </div>
+          )}
+          
+          {renderLegend()} 
+
+          {getDailyTimeSlots().length > 0 ? (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+              {getDailyTimeSlots().map(time => {
+                  const status = isTimeSlotAvailable(selectedDate, time);
+                  
+                  let bgColor = 'bg-white bg-opacity-10 hover:bg-opacity-20'; // Default libre
+                  let label = '';
+                  let isDisabled = false;
+
+                  if (!status.available) {
+                      isDisabled = true;
+                      if (status.type === 'MY_RESERVATION') {
+                          bgColor = 'bg-green-600 bg-opacity-50 cursor-not-allowed';
+                          label = 'Tu reserva';
+                      } else if (status.type === 'BLOCK') {
+                          bgColor = 'bg-red-600 bg-opacity-50 cursor-not-allowed';
+                          label = 'Mantenimiento';
+                      } else {
+                          bgColor = 'bg-gray-600 bg-opacity-50 cursor-not-allowed';
+                          label = 'Ocupado';
+                      }
+                  } else if (selectedTimeSlot === time) {
+                      bgColor = 'bg-white bg-opacity-40';
+                  }
+
+                  return (
+                      <button 
+                          key={time} 
+                          type="button" 
+                          disabled={isDisabled} 
+                          onClick={() => setSelectedTimeSlot(time)} 
+                          className={`py-2 px-3 rounded-md text-center text-white transition-all ${bgColor}`}
+                      >
+                          {time}
+                          {!status.available && <div className="text-[10px] mt-1 opacity-80">{label}</div>}
+                      </button>
+                  );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-white/70">
+              <AlertCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <p>No quedan espacios disponibles para este día</p>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -594,8 +718,8 @@ const BookingPage: React.FC = () => {
                 <div className="mt-8 flex justify-end">
                     <button 
                         onClick={handleNextStep} 
-                        disabled={isProcessing || !selectedTimeSlot}
-                        className="px-6 py-2 bg-white bg-opacity-15 backdrop-blur-sm text-white rounded-md hover:bg-opacity-30 transition-all border border-white border-opacity-30">
+                        disabled={isProcessing || !selectedTimeSlot || !!maintenanceAlert}
+                        className="px-6 py-2 bg-white bg-opacity-15 backdrop-blur-sm text-white rounded-md hover:bg-opacity-30 transition-all border border-white border-opacity-30 disabled:opacity-50 disabled:cursor-not-allowed">
                         {isProcessing ? 'Cargando...' : 'Continuar al Pago'}
                     </button>
                 </div>

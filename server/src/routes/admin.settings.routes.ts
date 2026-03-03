@@ -1,7 +1,10 @@
 import { Router } from 'express';
+import { authenticateToken, authorizeAdmin } from '../middlewares/aut_middlewares';
 import { 
     getPricingSettings, 
-    updatePricingSettings, 
+    updatePricingSettings,
+    createBlockedSlot,
+    deleteBlockedSlot,
     getLocationSettings, 
     updateLocationSettings,
     getTermsSettings,
@@ -9,7 +12,6 @@ import {
     getWifiSettings,        // ← ADD THIS
     updateWifiSettings 
 } from '../controllers/admin_settings_controller';
-import { authenticateToken } from '../middlewares/aut_middlewares'; // Asegúrate que la ruta sea correcta
 
 const router = Router();
 
@@ -24,7 +26,8 @@ router.put('/location', authenticateToken, updateLocationSettings);
 // Rutas de Términos
 router.get('/terms', getTermsSettings);
 router.put('/terms', authenticateToken, updateTermsSettings);
-// Rutas de Wi-Fi
-router.get('/wifi', getWifiSettings);
-router.put('/wifi', authenticateToken, updateWifiSettings);
+
+router.post('/blocks', authenticateToken, authorizeAdmin, createBlockedSlot);
+router.delete('/blocks/:id', authenticateToken, authorizeAdmin, deleteBlockedSlot);
+
 export default router;

@@ -7,14 +7,12 @@ import { prisma } from '../config/prisma';
 
 export const getPricingSettings = async (req: Request, res: Response): Promise<void> => {
     try {
-        // Obtenemos el precio base de la primera sala (asumiendo modelo de sitio único)
         const room = await prisma.room.findFirst();
         const packages = await prisma.pricingPackage.findMany({
             where: { isActive: true },
             orderBy: { price: 'asc' }
         });
         
-        // Obtenemos políticas de cancelación de la config global
         const businessConfig = await prisma.businessConfig.findUnique({ where: { id: 1 } });
 
         res.json({
@@ -36,8 +34,6 @@ export const updatePricingSettings = async (req: Request, res: Response): Promis
     try {
         const { hourlyRate, packages, cancellationPolicy } = req.body;
 
-        // 1. Actualizar precio base de la Sala (Room)
-        // Buscamos la primera sala o creamos una dummy si no existe
         const room = await prisma.room.findFirst();
         if (room) {
             await prisma.room.update({
@@ -46,7 +42,6 @@ export const updatePricingSettings = async (req: Request, res: Response): Promis
             });
         }
 
-        // 2. Actualizar Políticas de Cancelación (BusinessConfig)
         await prisma.businessConfig.upsert({
             where: { id: 1 },
             update: {
@@ -56,7 +51,7 @@ export const updatePricingSettings = async (req: Request, res: Response): Promis
             },
             create: {
                 id: 1,
-                address: "Dirección Pendiente", // Valores por defecto obligatorios
+                address: "Dirección Pendiente",
                 openingHours: {},
                 refundFullHours: cancellationPolicy.fullRefund,
                 refundPartialHours: cancellationPolicy.partialRefund,
@@ -64,8 +59,6 @@ export const updatePricingSettings = async (req: Request, res: Response): Promis
             }
         });
 
-        // 3. Actualizar Paquetes (Estrategia: Borrar anteriores y crear nuevos para evitar complejidad de diffs)
-        // NOTA: En producción idealmente harías upsert uno por uno, pero esto es más rápido para editar en lote.
         await prisma.pricingPackage.deleteMany({}); 
         
         if (packages && packages.length > 0) {
@@ -102,13 +95,12 @@ export const getLocationSettings = async (req: Request, res: Response): Promise<
             return;
         }
 
-        // Recuperamos la capacidad de la sala real para mantener sincronía
         const room = await prisma.room.findFirst();
 
         res.json({
             name: config.locationName,
             address: config.address,
-            openingHours: config.openingHours, // Prisma maneja el JSON automáticamente
+            openingHours: config.openingHours,
             capacity: room?.capacity || 10,
             accessInstructions: config.accessInstructions
         });
@@ -121,13 +113,12 @@ export const updateLocationSettings = async (req: Request, res: Response): Promi
     try {
         const { name, address, openingHours, capacity, accessInstructions } = req.body;
 
-        // 1. Actualizar Configuración Global
         await prisma.businessConfig.upsert({
             where: { id: 1 },
             update: {
                 locationName: name,
                 address: address,
-                openingHours: openingHours, // Guardamos el JSON directo
+                openingHours: openingHours,
                 accessInstructions: accessInstructions
             },
             create: {
@@ -139,7 +130,6 @@ export const updateLocationSettings = async (req: Request, res: Response): Promi
             }
         });
 
-        // 2. Actualizar Capacidad en la Sala (Room)
         const room = await prisma.room.findFirst();
         if (room) {
             await prisma.room.update({
@@ -161,7 +151,6 @@ export const updateLocationSettings = async (req: Request, res: Response): Promi
 
 export const getTermsSettings = async (req: Request, res: Response): Promise<void> => {
     try {
-        // Buscar la configuración activa (o la última creada)
         const terms = await prisma.termsConfig.findFirst({
             where: { isActive: true },
             orderBy: { createdAt: 'desc' }
@@ -183,18 +172,12 @@ export const updateTermsSettings = async (req: Request, res: Response): Promise<
     try {
         const { template, additionalClauses, privacyOptions } = req.body;
 
-        // ESTRATEGIA: Versionado
-        // En lugar de sobreescribir, desactivamos el anterior y creamos uno nuevo.
-        // Esto te permite tener un historial de qué términos aceptó cada usuario en el futuro.
-
-        // 1. Desactivar todos los anteriores
         await prisma.termsConfig.updateMany({
             where: { isActive: true },
             data: { isActive: false }
         });
 
-        // 2. Crear nueva versión
-        const newVersion = `v${Date.now()}`; // Generador simple de versión
+        const newVersion = `v${Date.now()}`;
         
         await prisma.termsConfig.create({
             data: {
@@ -202,7 +185,7 @@ export const updateTermsSettings = async (req: Request, res: Response): Promise<
                 isActive: true,
                 templateContent: template,
                 additionalClauses: additionalClauses,
-                privacyOptions: privacyOptions // JSON
+                privacyOptions: privacyOptions 
             }
         });
 
@@ -214,12 +197,85 @@ export const updateTermsSettings = async (req: Request, res: Response): Promise<
 };
 
 // ==========================================
-// 4. GESTIÓN DE WI-FI
+// 4. GESTIÓN DE BLOQUEOS (MANTENIMIENTO)
+// ==========================================
+
+export const createBlockedSlot = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { roomId, startTime, endTime, reason } = req.body;
+        
+        if (!roomId || !startTime || !endTime) {
+             res.status(400).json({ error: "Faltan datos de fecha o sala" });
+             return;
+        }
+
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+
+        if (start >= end) {
+             res.status(400).json({ error: "La fecha fin debe ser mayor a la de inicio" });
+             return;
+        }
+
+        const conflict = await prisma.reservation.findFirst({
+            where: {
+                roomId: roomId,
+                status: { not: "CANCELLED" },
+                AND: [
+                    { start_time: { lt: end } },
+                    { end_time: { gt: start } }
+                ]
+            }
+        });
+
+        if (conflict) {
+             res.status(409).json({ error: "No se puede bloquear: Hay reservas existentes en ese horario." });
+             return;
+        }
+
+        await prisma.blockedSlot.create({
+            data: {
+                roomId,
+                start_time: start,
+                end_time: end,
+                reason: reason || "Mantenimiento General"
+            }
+        });
+
+        res.json({ message: "Bloqueo creado correctamente" });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Error al crear bloqueo" });
+    }
+};
+
+export const deleteBlockedSlot = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+
+        if (!id) {
+            res.status(400).json({ error: "ID es requerido" });
+            return;
+        }
+
+        await prisma.blockedSlot.delete({
+            where: { id: id }
+        });
+
+        res.json({ message: "Bloqueo eliminado correctamente" });
+    } catch (error) {
+        console.error("Error eliminando bloqueo:", error);
+        res.status(500).json({ error: "Error al eliminar el bloqueo" });
+    } // <--- AQUÍ FALTABA CERRAR EL CATCH Y LA FUNCIÓN
+}; 
+
+// ==========================================
+// 5. GESTIÓN DE WI-FI
 // ==========================================
 
 export const getWifiSettings = async (req: Request, res: Response): Promise<void> => {
     try {
-        // Obtenemos la configuración Wi-Fi de la primera sala
         const room = await prisma.room.findFirst();
         
         res.json({
@@ -236,13 +292,11 @@ export const updateWifiSettings = async (req: Request, res: Response): Promise<v
     try {
         const { wifiName, wifiPassword } = req.body;
 
-        // Validación básica
         if (!wifiName || wifiName.trim() === "") {
             res.status(400).json({ error: "El nombre de Wi-Fi es obligatorio" });
             return;
         }
 
-        // Buscar la primera sala
         const room = await prisma.room.findFirst();
         
         if (!room) {
@@ -250,7 +304,6 @@ export const updateWifiSettings = async (req: Request, res: Response): Promise<v
             return;
         }
 
-        // Actualizar configuración Wi-Fi
         await prisma.room.update({
             where: { id: room.id },
             data: {

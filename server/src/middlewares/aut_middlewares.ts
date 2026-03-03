@@ -33,3 +33,15 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
         return;
     }
 };
+
+export const authorizeAdmin = (req: Request, res: Response, next: NextFunction) => {
+    // Asumimos que authenticateToken ya se ejecutó antes y puso req.user
+    const user = (req as any).user;
+
+    if (!user || user.role !== 'ADMIN') {
+         res.status(403).json({ error: "Acceso denegado. Se requieren permisos de Administrador." });
+         return; 
+    }
+
+    next();
+};

@@ -1,24 +1,16 @@
-import { Router } from 'express';
+import { Router } from "express";
+import { authenticateToken, authorizeAdmin} from "../middlewares/aut_middlewares"; 
 import {
     createReservation,
-    getMyReservations,
     getReservationsByDate,
+    getMyReservations,
+    getReservationsByRange
 } from '../controllers/reservation_controller';
-import { authenticateToken } from '../middlewares/aut_middlewares';
 
 const reservas = Router();
-
-// ⚠️  IMPORTANTE: las rutas específicas van ANTES que '/'
-// para que Express no las intercepte con el POST raíz.
-
-// GET /api/reservations/my-reservations — Fechas del usuario (calendario)
 reservas.get('/my-reservations', authenticateToken, getMyReservations);
-
-// GET /api/reservations?roomId=&date= — Bloques ocupados de un día
-// BookingPage llama directo a /reservations con query params
-reservas.get('/', getReservationsByDate);
-
-// POST /api/reservations — Crear reserva + Payment Intent
+reservas.get('/range', authenticateToken, authorizeAdmin, getReservationsByRange);
 reservas.post('/', authenticateToken, createReservation);
-
+reservas.get('/', authenticateToken, getReservationsByDate);
+reservas.get('/my-reservatios', authenticateToken, getMyReservations)
 export default reservas;

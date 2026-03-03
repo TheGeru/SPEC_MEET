@@ -137,7 +137,7 @@ export const forgotPassowrd = async (req: Request, res: Response): Promise<void>
             where: {id: user.id},
             data: {
                 resetPasswordToken: resetToken,
-                resetPasswordExpired: resetPasswordExpires
+                resetPasswordExpire: resetPasswordExpires
             }
         });
 
@@ -166,7 +166,7 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
         const user = await prisma.user.findFirst({
             where: {
                 resetPasswordToken: token,
-                resetPasswordExpired: { gt: new Date() } // gt = greater than (mayor que ahora)
+                resetPasswordExpire: { gt: new Date() } // gt = greater than (mayor que ahora)
             }
         });
 
@@ -184,7 +184,7 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
             data: {
                 password: hashedPassword,
                 resetPasswordToken: null,
-                resetPasswordExpired: null
+                resetPasswordExpire: null
             }
         });
 
