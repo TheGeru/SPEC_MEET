@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { MenuIcon, XIcon, UserIcon, CalendarIcon, SettingsIcon, LogOutIcon, HomeIcon, InfoIcon, TagIcon } from 'lucide-react';
+
 const Navbar: React.FC = () => {
   const {
     isAuthenticated,
@@ -9,27 +10,53 @@ const Navbar: React.FC = () => {
     logout,
   } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  // Detectar scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const handleLogout = () => {
     logout();
     navigate('/');
   };
-  return <nav className="bg-zinc-900 border-b border-zinc-800 sticky top-0 z-50">
+
+  // Determinar si estamos en páginas con imagen de fondo
+  const pagesWithImageBackground = ['/', '/booking', '/dashboard','/login','/register',];
+  const hasImageBackground = pagesWithImageBackground.includes(location.pathname);
+
+  
+  // Navbar transparente en páginas con imagen sin scroll, sólido después de scroll o en otras páginas
+  const navbarClasses = hasImageBackground && !scrolled
+    ? 'bg-transparent border-transparent'
+    : 'bg-background/60 backdrop-blur-md border-transparent';
+
+  return <nav className={`${navbarClasses} border-b sticky top-0 z-50 transition-all duration-300`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center">
+          <div className="flex items-center ">
             <Link to="/" className="flex-shrink-0">
-              <img src="/logotipo.png" alt="SPEC.MEET" className="h-10" />
+            <div className='h-10 w-40 relative overflow-hidden flex items-center -ml-6'>
+              <img src="/MEET.svg" alt=".MEET" className="h-25 w-auto object-contain brightness-0 invert hover:opacity-80" />
+            </div>
             </Link>
           </div>
           <div className="md:hidden">
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
+            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="inline-flex items-center justify-center p-2 rounded-md text-white hover:opacity-80 hover:bg-background focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
               <span className="sr-only">Abrir menú</span>
               {isMenuOpen ? <XIcon className="block h-6 w-6" /> : <MenuIcon className="block h-6 w-6" />}
             </button>
           </div>
           <div className="hidden md:block">
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
+            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="inline-flex items-center justify-center p-2 rounded-md text-white hover:opacity-80 hover:bg-background focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
               <span className="sr-only">Abrir menú</span>
               {isMenuOpen ? <XIcon className="block h-6 w-6" /> : <MenuIcon className="block h-6 w-6" />}
             </button>
@@ -37,8 +64,8 @@ const Navbar: React.FC = () => {
         </div>
       </div>
       {/* Mobile and desktop menu (same content) */}
-      {isMenuOpen && <div className="bg-zinc-900 shadow-lg absolute right-0 z-50 w-64 py-2">
-          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-zinc-900">
+      {isMenuOpen && <div className="bg-zinc-900/95 backdrop-blur-md shadow-lg absolute right-0 z-50 w-64 py-2 border border-zinc-800 rounded-b-lg">
+          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             <Link to="/" className="text-gray-300 hover:bg-zinc-800 hover:text-white block px-3 py-2 rounded-md text-base font-medium" onClick={() => setIsMenuOpen(false)}>
               <div className="flex items-center">
                 <HomeIcon className="mr-2 h-5 w-5" />
