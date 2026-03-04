@@ -88,8 +88,8 @@ const AdminDashboard: React.FC = () => {
 
   // ── Loading ──
   if (loading && !data) return (
-    <div className="flex justify-center items-center h-screen bg-zinc-950">
-      <Loader2 className="h-10 w-10 text-purple-500 animate-spin" />
+    <div className="flex justify-center items-center h-screen bg-white">
+      <Loader2 className="h-10 w-10 text-primary animate-spin" />
     </div>
   );
 
@@ -125,7 +125,7 @@ const AdminDashboard: React.FC = () => {
       {/* ── Header con botones de navegación ── */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white">
+          <h1 className="text-3xl font-makron font-bold text-background">
             Panel Administrativo
           </h1>
           <p className="text-gray-400 mt-2">
