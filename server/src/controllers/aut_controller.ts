@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken';
 import { prisma } from "../config/prisma";
 import { loginSchema, registerSchema } from "../utils/validation";
 import crypto from 'crypto';
+import { sendEmail } from "../services/email.service";
+import { error } from "console";
 
 export const register = async (req: Request, res: Response) : Promise<void> =>{
     try {
@@ -120,9 +122,16 @@ export const verifySession = (req: Request, res: Response) =>{
     res.json(req.user);
 };
 
+// ............................. RECUPERAR LA CONTRASEÑA ---------------------
+
 export const forgotPassowrd = async (req: Request, res: Response): Promise<void> => {
     try {
         const {email} = req.body;
+
+        if(!email) {
+            res.status(400).json({error: 'El correo es obligatorio'});
+            return;
+        }
         const user = await prisma.user.findUnique({where: {email}});
 
         if (!user) {
@@ -131,26 +140,32 @@ export const forgotPassowrd = async (req: Request, res: Response): Promise<void>
         }
 
         const resetToken = crypto.randomBytes(32).toString('hex');
-        const resetPasswordExpires = new Date(Date.now() + 3600000);
+        const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+        const expireDate = new Date(Date.now() + 3600000);
         
         await prisma.user.update({
-            where: {id: user.id},
+            where: {email},
             data: {
-                resetPasswordToken: resetToken,
-                resetPasswordExpire: resetPasswordExpires
+                resetPasswordToken: hashedToken,
+                resetPasswordExpire: expireDate,
             }
         });
 
-        //TODO: CUANDO ESTE EL CORREO OFICIAL LO CAMBIAMOS AQUI
         const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
-
-        console.log("-------------------------------------------");
-        console.log("SIMULANDO CORREO");
-        console.log(`Para: ${email}`);
-        console.log(`Link: ${resetUrl}`);
-        console.log("----------------------------------------------------");
-
-        res.json({message: "Si el correo esta registrado, recibiras un enlace"})
+        const htmlContent = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+                <h2 style="color: #4F46E5; text-align: center;">Recuperación de Contraseña</h2>
+                <p>Hola <strong>${user.name}</strong>,</p>
+                <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta en SPEC.MEET.</p>
+                <p>Haz clic en el siguiente botón para crear una nueva contraseña. Este enlace es válido por 1 hora.</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="${resetUrl}" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Restablecer Contraseña</a>
+                </div>
+                <p style="color: #6b7280; font-size: 14px;">Si no solicitaste este cambio, puedes ignorar este correo de forma segura.</p>
+            </div>
+        `;
+        await sendEmail(user.email, 'Recupera tu contraseña - SPEC MEET', htmlContent);
+        res.status(200).json({ message: 'Si el correo existe, se ha enviado un enlace de recuperación.' });
     } catch (error){
         console.error(error);
         res.status(500).json({error: "Error al procesar la solicitud"})
@@ -162,10 +177,22 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
         const { token } = req.params; // El token viene en la URL
         const { newPassword } = req.body;
 
+        if(!token){
+            res.status(400).json({error: 'Token de seguridad no proporcionado'});
+            return;
+        }
+
+        if(!newPassword || newPassword.length < 6) {
+            res.status(400).json({error: 'La contraseña debe de tener al menos 6 caracteres'});
+            return;
+        }
+
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
         // Buscar usuario que tenga ese token Y que el token no haya expirado
         const user = await prisma.user.findFirst({
             where: {
-                resetPasswordToken: token,
+                resetPasswordToken: hashedToken,
                 resetPasswordExpire: { gt: new Date() } // gt = greater than (mayor que ahora)
             }
         });
@@ -176,7 +203,8 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
         }
 
         // Encriptar la nueva contraseña
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
 
         // Actualizar usuario y BORRAR el token (para que no se use dos veces)
         await prisma.user.update({

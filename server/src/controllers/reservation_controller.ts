@@ -111,7 +111,6 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
             reservationId: newReservation.id,
             clientSecret: paymentIntent.client_secret,
             totalAmount,
-            accessCode, // Devolvemos el código al front para mostrarlo (simulación)
         });
 
     } catch (error) {
