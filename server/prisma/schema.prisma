@@ -38,35 +38,42 @@ model Room {
   name           String
   wifi_ssid      String
   wifi_pass      String
-  price_per_hour Decimal
   capacity       Int      @default(10)
   status         String   @default("INACTIVO")
   ttlock_lock_id String?
+  amenities      Json     @default("[]")        // ["wifi", "hdmi", "ac", "privacidad", "acceso_autonomo"]
+  locationId     Int      @map("location_id")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   // Relaciones
+  location     BusinessConfig @relation(fields: [locationId], references: [id])
   reservations Reservation[]
   blockedSlots BlockedSlot[] // 👈 NUEVO: Relación inversa para los mantenimientos
+  packages     PricePackage[]
+  baseRates    RoomBaseRate[]
+  
 }
 
 model Reservation {
   id                     String   @id @default(uuid())
   userId                 String
   roomId                 String
+  packageId              String   @map("package_id")
   start_time             DateTime
   end_time               DateTime
   access_code            String?
   total_paid             Decimal
   status                 String   @default("PENDING")
   terms_accepted         Boolean  @default(false)
-  accepted_terms_version String?
+  termsVersion           String   @map("terms_version")
   createdAt              DateTime @default(now())
 
   // Relaciones
-  payment Payment?
-  room    Room     @relation(fields: [roomId], references: [id])
-  user    User     @relation(fields: [userId], references: [id])
+ payment Payment?
+  room    Room         @relation(fields: [roomId], references: [id])
+  user    User         @relation(fields: [userId], references: [id])
+  package PricePackage @relation(fields: [packageId], references: [id])
 
   // Índices para búsquedas rápidas de disponibilidad
   @@index([roomId, start_time, end_time])
@@ -107,40 +114,65 @@ model Payment {
   reservation Reservation @relation(fields: [reservationId], references: [id])
 }
 
-model PricingPackage {
-  id        Int      @id @default(autoincrement())
-  name      String
-  hours     Int
-  price     Decimal
-  discount  Int
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum BillingUnit {
+  hour
+  half_day
+  full_day
+  flat
+  custom
+}
+
+model PricePackage {
+  id          String      @id @default(uuid())
+  name        String
+  description String?                              // nullable: some packages are self-explanatory
+  billingUnit BillingUnit @map("billing_unit")
+  minDuration Int?        @map("min_duration")     // nullable: not applicable for 'custom' type
+  maxDuration Int?        @map("max_duration")     // nullable: not applicable for 'custom' type
+  metadata    Json        @default("{}")            // { discountPct, blockHours, schedule, addOns... }
+  roomId      String?     @map("room_id")          // nullable: NULL = applies to ALL rooms
+  isActive    Boolean     @default(true) @map("is_active")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  room         Room?         @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  reservations Reservation[]
+
+  @@index([roomId])
+  @@index([billingUnit])
+  @@map("price_packages")
+}
+
+model RoomBaseRate {
+  id             String    @id @default(uuid())
+  roomId         String    @map("room_id")
+  hourlyRate     Decimal   @map("hourly_rate") @db.Decimal(10, 2)
+  currency       String    @default("MXN") @db.Char(3)
+  effectiveFrom  DateTime  @default(now()) @map("effective_from") @db.Timestamptz
+  effectiveUntil DateTime? @map("effective_until") @db.Timestamptz  // nullable: NULL = currently active rate
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, effectiveFrom(sort: Desc)])
+  @@map("room_base_rates")
 }
 
 // ---------------------------------------------------------
 // MODELOS DE CONFIGURACIÓN DEL SISTEMA
 // ---------------------------------------------------------
 
-model SystemSetting {
-  id          String   @id @default(uuid())
-  key         String   @unique
-  value       String
-  description String?
-  dataType    String   @default("TEXT")
-  updatedAt   DateTime @updatedAt
-}
-
 model BusinessConfig {
   id                 Int      @id @default(1)
   locationName       String   @default("SPEC.MEET Central")
   address            String
-  accessInstructions String?
-  openingHours       Json // { "mon": { "open": "09:00", "close": "18:00" }, ... }
+  accessInstructions String?   // nullable: some locations are straightforward
+  openingHours       Json      // { "mon": { "open": "08:00", "close": "22:00" }, ... }
   refundFullHours    Int      @default(24)
   refundPartialHours Int      @default(12)
   refundPartialPct   Int      @default(50)
   updatedAt          DateTime @updatedAt
+
+  rooms Room[]
 }
 
 model TermsConfig {
@@ -151,14 +183,6 @@ model TermsConfig {
   additionalClauses String?
   privacyOptions    Json
   createdAt         DateTime @default(now())
-  createdBy         String?
-}
 
-model TermsHistory {
-  id          String    @id @default(uuid())
-  version     String
-  content     String    @db.Text
-  activeFrom  DateTime  @default(now())
-  activeUntil DateTime?
-  createdAt   DateTime  @default(now())
+  @@map("terms_and_conditions")
 }
