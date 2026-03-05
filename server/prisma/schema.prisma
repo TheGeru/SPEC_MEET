@@ -68,10 +68,6 @@ model Reservation {
   terms_accepted         Boolean  @default(false)
   termsVersion           String   @map("terms_version")
   createdAt              DateTime @default(now())
-  accepted_terms_version String?
-  terms_accepted         Boolean  @default(false)
-  accepted_terms_version String?
-  createdAt              DateTime @default(now())
 
   // Relaciones
  payment Payment?
@@ -113,6 +109,10 @@ model Payment {
   paymentMethod String?
   iva_breakdown String? // Guardamos el JSON del desglose como String
   createdAt     DateTime @default(now())
+
+  // Relaciones
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+}
 
 enum BillingUnit {
   hour
@@ -185,13 +185,4 @@ model TermsConfig {
   createdAt         DateTime @default(now())
 
   @@map("terms_and_conditions")
-}
-
-model TermsHistory {
-  id          String    @id @default(uuid())
-  version     String
-  content     String    @db.Text
-  activeFrom  DateTime  @default(now())
-  activeUntil DateTime?
-  createdAt   DateTime  @default(now())
 }
