@@ -2,151 +2,69 @@ import { Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 
 // ==========================================
-// 1. GESTIÓN DE PRECIOS Y PAQUETES
+// 1. GESTIÓN DE NEGOCIO (Ubicación, Horarios, Reembolsos)
 // ==========================================
 
-export const getPricingSettings = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const room = await prisma.room.findFirst();
-        const packages = await prisma.pricingPackage.findMany({
-            where: { isActive: true },
-            orderBy: { price: 'asc' }
-        });
-        
-        const businessConfig = await prisma.businessConfig.findUnique({ where: { id: 1 } });
-
-        res.json({
-            hourlyRate: room?.price_per_hour || 0,
-            packages: packages,
-            cancellationPolicy: {
-                fullRefund: businessConfig?.refundFullHours || 24,
-                partialRefund: businessConfig?.refundPartialHours || 12,
-                partialRefundPercentage: businessConfig?.refundPartialPct || 50
-            }
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Error al obtener precios" });
-    }
-};
-
-export const updatePricingSettings = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { hourlyRate, packages, cancellationPolicy } = req.body;
-
-        const room = await prisma.room.findFirst();
-        if (room) {
-            await prisma.room.update({
-                where: { id: room.id },
-                data: { price_per_hour: hourlyRate }
-            });
-        }
-
-        await prisma.businessConfig.upsert({
-            where: { id: 1 },
-            update: {
-                refundFullHours: cancellationPolicy.fullRefund,
-                refundPartialHours: cancellationPolicy.partialRefund,
-                refundPartialPct: cancellationPolicy.partialRefundPercentage
-            },
-            create: {
-                id: 1,
-                address: "Dirección Pendiente",
-                openingHours: {},
-                refundFullHours: cancellationPolicy.fullRefund,
-                refundPartialHours: cancellationPolicy.partialRefund,
-                refundPartialPct: cancellationPolicy.partialRefundPercentage
-            }
-        });
-
-        await prisma.pricingPackage.deleteMany({}); 
-        
-        if (packages && packages.length > 0) {
-            await prisma.pricingPackage.createMany({
-                data: packages.map((pkg: any) => ({
-                    name: pkg.name,
-                    hours: pkg.hours,
-                    price: pkg.price,
-                    discount: pkg.discount,
-                    isActive: true
-                }))
-            });
-        }
-
-        res.json({ message: "Configuración de precios guardada correctamente" });
-    } catch (error) {
-        console.error("Error updating pricing:", error);
-        res.status(500).json({ error: "Error al guardar configuración de precios" });
-    }
-};
-
-// ==========================================
-// 2. GESTIÓN DE UBICACIÓN Y HORARIOS
-// ==========================================
-
-export const getLocationSettings = async (req: Request, res: Response): Promise<void> => {
+export const getBusinessConfig = async (req: Request, res: Response): Promise<void> => {
     try {
         const config = await prisma.businessConfig.findUnique({ where: { id: 1 } });
         
         if (!config) {
             res.json({ 
-                name: "", address: "", openingHours: {}, capacity: 0, accessInstructions: "" 
+                locationName: "", 
+                address: "", 
+                openingHours: {}, 
+                accessInstructions: "",
+                refundFullHours: 24,
+                refundPartialHours: 12,
+                refundPartialPct: 50
             });
             return;
         }
 
-        const room = await prisma.room.findFirst();
-
-        res.json({
-            name: config.locationName,
-            address: config.address,
-            openingHours: config.openingHours,
-            capacity: room?.capacity || 10,
-            accessInstructions: config.accessInstructions
-        });
+        res.json(config);
     } catch (error) {
-        res.status(500).json({ error: "Error al obtener ubicación" });
+        console.error("Error obteniendo business config:", error);
+        res.status(500).json({ error: "Error al obtener configuración del negocio" });
     }
 };
 
-export const updateLocationSettings = async (req: Request, res: Response): Promise<void> => {
+export const updateBusinessConfig = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { name, address, openingHours, capacity, accessInstructions } = req.body;
+        const { locationName, address, openingHours, accessInstructions, refundFullHours, refundPartialHours, refundPartialPct } = req.body;
 
-        await prisma.businessConfig.upsert({
+        const updatedConfig = await prisma.businessConfig.upsert({
             where: { id: 1 },
             update: {
-                locationName: name,
-                address: address,
-                openingHours: openingHours,
-                accessInstructions: accessInstructions
+                locationName,
+                address,
+                openingHours,
+                accessInstructions,
+                refundFullHours,
+                refundPartialHours,
+                refundPartialPct
             },
             create: {
                 id: 1,
-                locationName: name,
-                address: address,
-                openingHours: openingHours,
-                accessInstructions: accessInstructions
+                locationName: locationName || "SPEC.MEET Central",
+                address: address || "Pendiente",
+                openingHours: openingHours || {},
+                accessInstructions,
+                refundFullHours: refundFullHours || 24,
+                refundPartialHours: refundPartialHours || 12,
+                refundPartialPct: refundPartialPct || 50
             }
         });
 
-        const room = await prisma.room.findFirst();
-        if (room) {
-            await prisma.room.update({
-                where: { id: room.id },
-                data: { capacity: Number(capacity) }
-            });
-        }
-
-        res.json({ message: "Ubicación actualizada correctamente" });
+        res.json(updatedConfig);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Error al guardar ubicación" });
+        console.error("Error actualizando business config:", error);
+        res.status(500).json({ error: "Error al guardar configuración del negocio" });
     }
 };
 
 // ==========================================
-// 3. GESTIÓN DE TÉRMINOS Y CONDICIONES
+// 2. GESTIÓN DE TÉRMINOS Y CONDICIONES
 // ==========================================
 
 export const getTermsSettings = async (req: Request, res: Response): Promise<void> => {
@@ -156,21 +74,20 @@ export const getTermsSettings = async (req: Request, res: Response): Promise<voi
             orderBy: { createdAt: 'desc' }
         });
 
-        res.json({
-            template: terms?.templateContent || "",
-            additionalClauses: terms?.additionalClauses || "",
-            privacyOptions: terms?.privacyOptions || {
-                collectEmail: true, shareData: false, cctvNotice: true, cookieConsent: true
-            }
+        res.json(terms || {
+            templateContent: "",
+            additionalClauses: "",
+            privacyOptions: { collectEmail: true, shareData: false, cctvNotice: true, cookieConsent: true }
         });
     } catch (error) {
+        console.error("Error obteniendo términos:", error);
         res.status(500).json({ error: "Error obteniendo términos" });
     }
 };
 
 export const updateTermsSettings = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { template, additionalClauses, privacyOptions } = req.body;
+        const { templateContent, additionalClauses, privacyOptions } = req.body;
 
         await prisma.termsConfig.updateMany({
             where: { isActive: true },
@@ -179,28 +96,267 @@ export const updateTermsSettings = async (req: Request, res: Response): Promise<
 
         const newVersion = `v${Date.now()}`;
         
-        await prisma.termsConfig.create({
+        const newTerms = await prisma.termsConfig.create({
             data: {
                 version: newVersion,
                 isActive: true,
-                templateContent: template,
-                additionalClauses: additionalClauses,
-                privacyOptions: privacyOptions 
+                templateContent,
+                additionalClauses,
+                privacyOptions 
             }
         });
 
-        res.json({ message: "Términos actualizados y nueva versión generada." });
+        res.json(newTerms);
     } catch (error) {
-        console.error(error);
+        console.error("Error actualizando términos:", error);
         res.status(500).json({ error: "Error guardando términos" });
     }
 };
 
 // ==========================================
-// 4. GESTIÓN DE BLOQUEOS (MANTENIMIENTO)
+// 3. GESTIÓN DE WI-FI
+// ==========================================
+
+export const getWifiSettings = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const room = await prisma.room.findUnique({
+            where: { id }
+        });
+        
+        if (!room) {
+             res.status(404).json({ error: "Sala no encontrada" });
+             return;
+        }
+
+        res.json({
+            id: room.id,
+            wifi_ssid: room.wifi_ssid,
+            wifi_pass: room.wifi_pass
+        });
+    } catch (error) {
+        console.error("Error obteniendo Wi-Fi:", error);
+        res.status(500).json({ error: "Error al obtener configuración Wi-Fi" });
+    }
+};
+
+export const updateWifiSettings = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const { wifi_ssid, wifi_pass } = req.body;
+
+        if (!wifi_ssid || wifi_ssid.trim() === "") {
+            res.status(400).json({ error: "El nombre de Wi-Fi es obligatorio" });
+            return;
+        }
+
+        const updatedRoom = await prisma.room.update({
+            where: { id },
+            data: {
+               wifi_ssid,
+               wifi_pass: wifi_pass || ""
+            }
+        });
+
+        res.json({
+            id: updatedRoom.id,
+            wifi_ssid: updatedRoom.wifi_ssid,
+            wifi_pass: updatedRoom.wifi_pass
+        });
+    } catch (error) {
+        console.error("Error actualizando Wi-Fi:", error);
+        res.status(500).json({ error: "Error al guardar configuración Wi-Fi" });
+    }
+};
+
+// ==========================================
+// 4. GESTIÓN DE PAQUETES (PricePackage)
+// ==========================================
+
+export const getPackages = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // 1. Obtener todos los paquetes
+        const packages = await prisma.pricePackage.findMany({
+            orderBy: { createdAt: 'desc' },
+            // Opcional: incluir datos de la sala si los necesitas en el frontend
+            // include: { room: true } 
+        });
+
+        // 2. Obtener TODAS las tarifas base ACTIVAS (effectiveUntil es null)
+        const activeRates = await prisma.roomBaseRate.findMany({
+            where: { effectiveUntil: null }
+        });
+
+        // 3. Crear un mapa rápido de tarifas por RoomID para no hacer un bucle pesado (Optimización O(1))
+        const ratesMap = new Map(activeRates.map(rate => [rate.roomId, rate.hourlyRate]));
+
+       // 4. Mapear los paquetes y calcular el precio al vuelo
+    const packagesWithComputedPrice = packages.map(pkg => {
+        // 🛡️ FIX 1 (TS2345): Manejar el null de Prisma de forma segura
+        const safeRoomId = pkg.roomId ?? "";
+        
+        // Buscar la tarifa cruda (Prisma Decimal)
+        const rawRate = ratesMap.get(safeRoomId);
+        
+        // 🛡️ FIX 2 (TS2362): Convertir el Objeto Decimal a un primitivo numérico para hacer matemáticas
+        const baseHourlyRate = rawRate ? Number(rawRate) : 0; 
+        
+        // Parseo defensivo del JSON de Prisma
+        let metadata: any = {};
+        if (typeof pkg.metadata === 'string') {
+            try { metadata = JSON.parse(pkg.metadata); } catch (e) { console.error("Error parseando metadata"); }
+        } else if (pkg.metadata && typeof pkg.metadata === 'object') {
+            metadata = pkg.metadata;
+        }
+
+        // Extracción segura forzando a Number
+        const blockHours = Number(metadata?.blockHours ?? 1); 
+        const discountPct = Number(metadata?.discountPct ?? 0); 
+
+        // 🧮 LA FÓRMULA MÁGICA: Ya son números 100% primitivos, el operador '*' funcionará perfecto
+        const subtotal = baseHourlyRate * blockHours;
+        const discountAmount = subtotal * (discountPct / 100);
+        const computedPrice = subtotal - discountAmount;
+
+        return {
+            ...pkg,
+            price: computedPrice,
+        };
+    });
+
+        res.json(packagesWithComputedPrice);
+    } catch (error) {
+        console.error("Error obteniendo paquetes:", error);
+        res.status(500).json({ error: "Error al obtener paquetes" });
+    }
+};
+
+export const createPackage = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const data = req.body;
+        const newPackage = await prisma.pricePackage.create({ data });
+        res.status(201).json(newPackage);
+    } catch (error) {
+        console.error("Error creando paquete:", error);
+        res.status(500).json({ error: "Error al crear paquete" });
+    }
+};
+
+export const updatePackage = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const data = req.body;
+        const updatedPackage = await prisma.pricePackage.update({
+            where: { id },
+            data
+        });
+        res.json(updatedPackage);
+    } catch (error) {
+        console.error("Error actualizando paquete:", error);
+        res.status(500).json({ error: "Error al actualizar paquete" });
+    }
+};
+
+export const togglePackageActive = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const { isActive } = req.body;
+        const updatedPackage = await prisma.pricePackage.update({
+            where: { id },
+            data: { isActive }
+        });
+        res.json(updatedPackage);
+    } catch (error) {
+        console.error("Error cambiando estado de paquete:", error);
+        res.status(500).json({ error: "Error al cambiar estado del paquete" });
+    }
+};
+
+export const deletePackage = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        await prisma.pricePackage.delete({ where: { id } });
+        res.status(204).send();
+    } catch (error) {
+        console.error("Error eliminando paquete:", error);
+        res.status(500).json({ error: "Error al eliminar paquete" });
+    }
+};
+
+// ==========================================
+// 5. GESTIÓN DE TARIFAS BASE (RoomBaseRate)
+// ==========================================
+
+export const getBaseRates = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const rates = await prisma.roomBaseRate.findMany({
+            orderBy: { effectiveFrom: 'desc' }
+        });
+        res.json(rates);
+    } catch (error) {
+        console.error("Error obteniendo tarifas:", error);
+        res.status(500).json({ error: "Error al obtener tarifas base" });
+    }
+};
+
+export const createBaseRate = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { roomId, hourlyRate, currency } = req.body;
+
+        // "Archivar" la tarifa actual (ponerle fecha de fin)
+        await prisma.roomBaseRate.updateMany({
+            where: { 
+                roomId, 
+                effectiveUntil: null 
+            },
+            data: { 
+                effectiveUntil: new Date() 
+            }
+        });
+
+        // Crear la nueva tarifa
+        const newRate = await prisma.roomBaseRate.create({
+            data: {
+                roomId,
+                hourlyRate,
+                currency: currency || "MXN"
+            }
+        });
+
+        res.status(201).json(newRate);
+    } catch (error) {
+        console.error("Error creando tarifa:", error);
+        res.status(500).json({ error: "Error al crear tarifa base" });
+    }
+};
+
+// ==========================================
+// 6. RESUMEN DE SALAS (Para dropdowns)
+// ==========================================
+
+export const getRoomsSummary = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const rooms = await prisma.room.findMany({
+            select: {
+                id: true,
+                name: true,
+                capacity: true,
+                status: true
+            }
+        });
+        res.json(rooms);
+    } catch (error) {
+        console.error("Error obteniendo resumen de salas:", error);
+        res.status(500).json({ error: "Error al obtener salas" });
+    }
+};
+
+// ==========================================
+// 7. GESTIÓN DE BLOQUEOS (MANTENIMIENTO)
 // ==========================================
 
 export const createBlockedSlot = async (req: Request, res: Response): Promise<void> => {
+    // ... (Mantén la lógica que ya tenías para createBlockedSlot) ...
     try {
         const { roomId, startTime, endTime, reason } = req.body;
         
@@ -251,7 +407,8 @@ export const createBlockedSlot = async (req: Request, res: Response): Promise<vo
 };
 
 export const deleteBlockedSlot = async (req: Request, res: Response): Promise<void> => {
-    try {
+     // ... (Mantén la lógica que ya tenías para deleteBlockedSlot) ...
+     try {
         const { id } = req.params;
 
         if (!id) {
@@ -267,54 +424,5 @@ export const deleteBlockedSlot = async (req: Request, res: Response): Promise<vo
     } catch (error) {
         console.error("Error eliminando bloqueo:", error);
         res.status(500).json({ error: "Error al eliminar el bloqueo" });
-    } // <--- AQUÍ FALTABA CERRAR EL CATCH Y LA FUNCIÓN
-}; 
-
-// ==========================================
-// 5. GESTIÓN DE WI-FI
-// ==========================================
-
-export const getWifiSettings = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const room = await prisma.room.findFirst();
-        
-        res.json({
-            wifiName: room?.wifi_ssid || "",
-            wifiPassword: room?.wifi_pass || ""
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Error al obtener configuración Wi-Fi" });
-    }
-};
-
-export const updateWifiSettings = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { wifiName, wifiPassword } = req.body;
-
-        if (!wifiName || wifiName.trim() === "") {
-            res.status(400).json({ error: "El nombre de Wi-Fi es obligatorio" });
-            return;
-        }
-
-        const room = await prisma.room.findFirst();
-        
-        if (!room) {
-            res.status(404).json({ error: "No se encontró ninguna sala configurada" });
-            return;
-        }
-
-        await prisma.room.update({
-            where: { id: room.id },
-            data: {
-               wifi_ssid: wifiName,
-                wifi_pass: wifiPassword || null
-            }
-        });
-
-        res.json({ message: "Configuración Wi-Fi actualizada correctamente" });
-    } catch (error) {
-        console.error("Error updating Wi-Fi settings:", error);
-        res.status(500).json({ error: "Error al guardar configuración Wi-Fi" });
     }
 };
