@@ -7,14 +7,13 @@ const CLIENT_SECRET = process.env.TTLOCK_CLIENT_SECRET;
 const ADMIN_USERNAME = process.env.TTLOCK_ADMIN_USERNAME;
 const ADMIN_PASSWORD = process.env.TTLOCK_ADMIN_PASSWORD;
 
-// 1. CORRECCIÓN: Faltaba la URL oficial de Sciener
+// URL oficial de Sciener
 const API_TTLOCK = "https://api.sciener.com";
 
 let accessToken: string | null = null;
 let tokenExpiration: number = 0;
 
 export const getTTLockToken = async (): Promise<string> => {
-    // Checamos si ya tenemos un token que no ha caducado
     if (accessToken && Date.now() < tokenExpiration) {
         return accessToken;
     }
@@ -37,7 +36,6 @@ export const getTTLockToken = async (): Promise<string> => {
 
         if (response.data.access_token) {
             accessToken = response.data.access_token;
-            // Guardamos la expiración (restamos 1 min por seguridad)
             tokenExpiration = Date.now() + (response.data.expires_in * 1000) - 60000;
             
             console.log("✅ Token TTLock renovado exitosamente");
@@ -59,43 +57,44 @@ export const generatePasscode = async (
   ): Promise<string> => {
     
     // --- 🚨 ZONA DE SIMULACIÓN (MOCK) 🚨 ---
-    // ESTO ES LO NUEVO: Si detectamos que es una prueba, cortamos aquí.
     if (lockId.startsWith("MOCK_")) {
         console.log(`⚠️ [SIMULACIÓN] Generando código falso para Lock: ${lockId}`);
-        return "888888"; // Retornamos código de éxito falso inmediatamente
+        return "888888"; 
     }
     // ---------------------------------------
 
     try {
-      // 1. Si no es Mock, ejecutamos la lógica real
       const token = await getTTLockToken();
   
-      const start = startTime.getTime();
-      const end = endTime.getTime();
+      // Convertimos las fechas a String porque URLSearchParams solo acepta textos
+      const start = startTime.getTime().toString();
+      const end = endTime.getTime().toString();
   
       console.log(`🔐 Generando código REAL para LockID: ${lockId}`);
   
-      // 3. Petición al endpoint real
-      const response = await axios.get(`${API_TTLOCK}/v3/keyboardPwd/get`, {
-        params: {
-          clientId: CLIENT_ID,
+      // 👇 CORRECCIÓN CLAVE: Usamos POST y URLSearchParams con todo en formato String
+      const params = new URLSearchParams({
+          clientId: CLIENT_ID as string,
           accessToken: token,
           lockId: lockId,
-          keyboardPwdType: 3, 
-          keyboardPwdVersion: 4, 
+          keyboardPwdType: '3', 
+          keyboardPwdVersion: '4', 
           startDate: start,
           endDate: end,
-          date: Date.now(),      
-          addType: 2             
-        }
+          date: Date.now().toString(),      
+          addType: '2'             
+      });
+
+      const response = await axios.post(`${API_TTLOCK}/v3/keyboardPwd/get`, params.toString(), {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
       });
   
-      // 4. Verificamos error de la API
-      if (response.data.errcode !== 0) {
+      // Verificamos si TTLock nos regresó un error (errcode 0 significa que todo salió perfecto)
+      if (response.data.errcode !== 0 && response.data.errcode !== undefined) {
         throw new Error(`TTLock API Error [${response.data.errcode}]: ${response.data.errmsg}`);
       }
   
-      // 5. ¡Éxito real!
+      // ¡Éxito real!
       console.log("✅ Código real generado:", response.data.keyboardPwd);
       return response.data.keyboardPwd;
   

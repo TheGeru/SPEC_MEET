@@ -16,6 +16,7 @@ out/
 *.local
 .DS_Store    # *Basura de Mac
 Thumbs.db    # *Basura de Windows
+Google_calendar_key.json
 
 # *Logs y Errores
 *.log

@@ -31,8 +31,6 @@ app.get('/', (req, res)=>{
 });
 
 app.use('/api/rooms', routerRoom)
-app.use('/api/reservations', reservationRoutes);
-
 
 app.use('/api/admin/settings', adminSettingsRoutes);
 
@@ -41,5 +39,21 @@ app.use('/api/reservations', reservationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 app.use('/api/admin/financial', financialrouter);
+
+/* Ruta temporal para probar Google Calendar
+app.get('/api/test-ttlock', async (req, res) => {
+    try {
+        const lockIdReal = "20612775"; // ¡Tu ID real!
+        
+        const fechaInicio = new Date();
+        const fechaFin = new Date(fechaInicio.getTime() + (60 * 60 * 1000)); // Válido por 1 hora
+
+        const codigo = await generatePasscode(lockIdReal, fechaInicio, fechaFin);
+
+        res.json({ mensaje: "¡Éxito!", codigoGenerado: codigo });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});*/
 
 export default app;
