@@ -12,6 +12,7 @@ import { z } from "zod";
 // ─── CONST TYPES (Single source of truth) ─────────────────────
 
 export const BOOKING_STEP = {
+  ROOM: "room",
   DATE: "date",
   PAYMENT: "payment",
   CONFIRMATION: "confirmation",
@@ -52,9 +53,31 @@ export interface ReservationSlot {
   endTime: string;
 }
 
+export interface RoomBaseRate {
+  id: string;
+  hourlyRate: string; // Prisma devuelve Decimal como string en JSON
+  currency: string;
+}
+
+export interface PricePackage {
+  id: string;
+  name: string;
+  description?: string;
+  billingUnit: "hour" | "half_day" | "full_day" | "flat" | "custom";
+  minDuration?: number;
+  maxDuration?: number;
+  metadata: Record<string, unknown>;
+}
+
 export interface Room {
   id: string;
   name: string;
+  capacity: number;
+  status: string;
+  amenities: string[];
+  // 🆕 Relaciones incluidas por el backend en GET /rooms/:id
+  baseRates: RoomBaseRate[];
+  packages: PricePackage[];
 }
 
 export interface BookingSelection {
@@ -65,6 +88,8 @@ export interface BookingSelection {
 }
 
 export interface BookingSummary {
+  roomName: string;         // 🆕 Para mostrar el nombre de la sala en el resumen
+  packageName?: string; 
   date: string;
   formattedDate: string;
   startTime: string;
@@ -94,6 +119,7 @@ export interface ExistingReservation {
 
 export const createReservationSchema = z.object({
   roomId: z.string().min(1, { error: "Room ID es requerido" }),
+  packageId:       z.string().min(1).optional(), // 🆕
   startTime: z.string().min(1, { error: "Hora de inicio es requerida" }),
   endTime: z.string().min(1, { error: "Hora de fin es requerida" }),
   termsAccepted: z.literal(true, {
@@ -107,7 +133,7 @@ export type CreateReservationPayload = z.infer<typeof createReservationSchema>;
 // ─── CONSTANTS ────────────────────────────────────────────────
 
 export const BOOKING_CONFIG = {
-  PRICE_PER_HOUR: 200,
+  PRICE_PER_HOUR_FALLBACK: 0,
   IVA_RATE: 0.16,
   CLEANING_BUFFER_MINUTES: 30,
   OPERATION_START_HOUR: 9,

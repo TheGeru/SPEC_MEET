@@ -18,6 +18,7 @@ import { useState, useEffect } from "react";
 import {
   BOOKING_CONFIG,
   type ExistingReservation,
+  type Room,
 } from "../models";
 import {
   fetchRooms,
@@ -25,9 +26,13 @@ import {
   fetchMyBookedDates,
 } from "../services/booking.service";
 
+interface UseAvailabilityProps {
+  roomId: string;
+}
+
 interface UseAvailabilityReturn {
   // Room
-  roomId: string;
+  rooms: Room[];
   isLoadingRoom: boolean;
 
   // Reservations for selected date
@@ -46,8 +51,8 @@ interface UseAvailabilityReturn {
   refreshMyBookings: () => Promise<void>;
 }
 
-export const useAvailability = (): UseAvailabilityReturn => {
-  const [roomId, setRoomId] = useState("");
+export const useAvailability = ({roomId}: UseAvailabilityProps): UseAvailabilityReturn => {
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [isLoadingRoom, setIsLoadingRoom] = useState(true);
   const [existingReservations, setExistingReservations] = useState<
     ExistingReservation[]
@@ -56,19 +61,17 @@ export const useAvailability = (): UseAvailabilityReturn => {
 
   // ── Load default room on mount ──────────────────────────────
   useEffect(() => {
-    const loadRoom = async () => {
+    const loadRooms = async () => {
       try {
-        const rooms = await fetchRooms();
-        if (rooms.length > 0) {
-          setRoomId(rooms[0].id);
-        }
+        const data = await fetchRooms();
+        setRooms(data);
       } catch (error) {
         console.error("Error loading rooms:", error);
       } finally {
         setIsLoadingRoom(false);
       }
     };
-    loadRoom();
+    loadRooms ();
   }, []);
 
   // ── Load my booked dates on mount ───────────────────────────
@@ -116,34 +119,28 @@ export const useAvailability = (): UseAvailabilityReturn => {
     const selectedDateObj = new Date(`${date}T12:00:00`);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    
     const checkDate = new Date(selectedDateObj);
     checkDate.setHours(0, 0, 0, 0);
 
+    if(checkDate < today) return [];
+
     if (checkDate.getTime() === today.getTime()) {
-      const currentHour = now.getHours();
-      const currentMinutes = now.getMinutes();
 
       return slots.filter((slot) => {
         const [slotHour, slotMin] = slot.split(":").map(Number);
-        if (slotHour > currentHour) return true;
-        if (slotHour === currentHour && slotMin > currentMinutes) return true;
+        if (slotHour > now.getHours()) return true;
+        if (slotHour === now.getHours() && slotMin > now.getMinutes()) return true;
         return false;
       });
     }
-
-    // Past dates → no slots
-    if (checkDate < today) return [];
 
     return slots;
   };
 
   // ── Check if a specific slot is available ───────────────────
   // Implements US-01: 30-minute cleaning buffer after each reservation
-  const isSlotAvailable = (
-    dateStr: string,
-    timeStr: string,
-    duration: number
-  ): boolean => {
+  const isSlotAvailable = (dateStr: string, timeStr: string, duration: number): boolean => {
     if (existingReservations.length === 0) return true;
 
     const proposedStart = new Date(`${dateStr}T${timeStr}:00`);
@@ -154,10 +151,15 @@ export const useAvailability = (): UseAvailabilityReturn => {
       BOOKING_CONFIG.CLEANING_BUFFER_MINUTES * 60 * 1000;
 
     return !existingReservations.some((reservation) => {
-      const busyStart = reservation.start.getTime();
-      const busyEnd = reservation.end.getTime() + cleaningBufferMs;
+        const start = reservation.start instanceof Date ? reservation.start : new Date(reservation.start);
+        const end = reservation.end instanceof Date ? reservation.end : new Date(reservation.end);
+
+        const busyStart = start.getTime() - cleaningBufferMs;
+        const busyEnd = end.getTime() + cleaningBufferMs;
+        
       return (
-        proposedStart.getTime() < busyEnd && proposedEnd.getTime() > busyStart
+        proposedStart.getTime() < busyEnd && 
+        proposedEnd.getTime() > busyStart
       );
     });
   };
@@ -166,13 +168,15 @@ export const useAvailability = (): UseAvailabilityReturn => {
   const hasDayReservations = (day: Date): boolean => {
     const calendarStr = day.toISOString().split("T")[0];
     return existingReservations.some((r) => {
-      const reservationDateStr = r.start.toISOString().split("T")[0];
-      return reservationDateStr === calendarStr;
+        console.log("🔍 r.start vale:", r.start, "tipo:", typeof r.start);
+        const startDate = r.start instanceof Date ? r.start : new Date(r.start);
+        const reservationDateStr = startDate.toISOString().split("T")[0];
+        return reservationDateStr === calendarStr;
     });
   };
 
   return {
-    roomId,
+    rooms,
     isLoadingRoom,
     existingReservations,
     myBookedDates,

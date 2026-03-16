@@ -24,19 +24,22 @@ import {
   type BookingStep,
   type PaymentMethod,
   type BookingSummary,
+  type Room,
 } from "../models";
 import { createReservation } from "../services/booking.service";
 
 interface UseBookingFlowReturn {
   // Step navigation
   currentStep: BookingStep;
+  goToDate: (room: Room) => void; // 🆕
   goToPayment: () => Promise<void>;
+  goBackToRoom: () => void;                          // 🆕
   goBackToDate: () => void;
   goToConfirmation: () => void;
 
+  selectedRoom: Room | null;
   // Selection state
   roomId: string;
-  setRoomId: (id: string) => void;
   selectedDate: string;
   setSelectedDate: (date: string) => void;
   selectedTimeSlot: string;
@@ -61,10 +64,11 @@ interface UseBookingFlowReturn {
 
 export const useBookingFlow = (): UseBookingFlowReturn => {
   // ── Step state ──────────────────────────────────────────────
-  const [currentStep, setCurrentStep] = useState<BookingStep>(BOOKING_STEP.DATE);
+  const [currentStep, setCurrentStep] = useState<BookingStep>(BOOKING_STEP.ROOM);
 
   // ── Selection state ─────────────────────────────────────────
-  const [roomId, setRoomId] = useState("");
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTimeSlot, setSelectedTimeSlot] = useState("");
   const [selectedDuration, setSelectedDuration] = useState(1);
@@ -97,19 +101,23 @@ export const useBookingFlow = (): UseBookingFlowReturn => {
   };
 
   // ── Derived: Build summary ──────────────────────────────────
+    const pricePerHour = selectedRoom?.baseRates?.[0]
+    ? Number(selectedRoom.baseRates[0].hourlyRate)
+    : BOOKING_CONFIG.PRICE_PER_HOUR_FALLBACK;
+
   const summary: BookingSummary | null =
-    selectedDate && selectedTimeSlot
+    selectedDate && selectedTimeSlot && selectedRoom
       ? (() => {
-          const subtotal =
-            BOOKING_CONFIG.PRICE_PER_HOUR * selectedDuration;
+          const subtotal = pricePerHour * selectedDuration;
           const iva = subtotal * BOOKING_CONFIG.IVA_RATE;
           return {
-            date: selectedDate,
+            roomName:     selectedRoom.name,          // 🆕
+            date:         selectedDate,
             formattedDate: formatDate(selectedDate),
-            startTime: selectedTimeSlot,
-            endTime: calculateEndTime(selectedTimeSlot, selectedDuration),
-            duration: selectedDuration,
-            pricePerHour: BOOKING_CONFIG.PRICE_PER_HOUR,
+            startTime:    selectedTimeSlot,
+            endTime:      calculateEndTime(selectedTimeSlot, selectedDuration),
+            duration:     selectedDuration,
+            pricePerHour,
             subtotal,
             iva,
             total: subtotal,
@@ -117,8 +125,20 @@ export const useBookingFlow = (): UseBookingFlowReturn => {
         })()
       : null;
 
-  const canProceedToPayment = !!(selectedDate && selectedTimeSlot && roomId);
+  const canProceedToPayment = !!(
+    selectedDate &&
+    selectedTimeSlot &&
+    selectedRoom
+  );
 
+  const goToDate = (room: Room) => {
+    setSelectedRoom(room);
+    // Limpiamos la fecha y hora si venían de una selección anterior
+    // (por si el usuario regresa a cambiar de sala)
+    setSelectedDate("");
+    setSelectedTimeSlot("");
+    setCurrentStep(BOOKING_STEP.DATE);
+  };
   // ── Actions ─────────────────────────────────────────────────
 
   const goToPayment = async () => {
@@ -136,10 +156,10 @@ export const useBookingFlow = (): UseBookingFlowReturn => {
       const endISO = endDate.toISOString();
 
       const result = await createReservation({
-        roomId,
-        startTime: startISO,
-        endTime: endISO,
-        termsAccepted: true,
+        roomId:          selectedRoom.id,
+        startTime:       startISO,
+        endTime:         endISO,
+        termsAccepted:   true,
         acceptedVersion: BOOKING_CONFIG.TERMS_VERSION,
       });
 
@@ -159,6 +179,12 @@ export const useBookingFlow = (): UseBookingFlowReturn => {
     }
   };
 
+    const goBackToRoom = () => {
+    setSelectedDate("");
+    setSelectedTimeSlot("");
+    setCurrentStep(BOOKING_STEP.ROOM);
+  };
+
   const goBackToDate = () => {
     setClientSecret("");
     setPaymentError("");
@@ -169,14 +195,18 @@ export const useBookingFlow = (): UseBookingFlowReturn => {
     setCurrentStep(BOOKING_STEP.CONFIRMATION);
   };
 
+
   return {
     currentStep,
+    goToDate,
     goToPayment,
+    goBackToRoom,
     goBackToDate,
     goToConfirmation,
 
-    roomId,
-    setRoomId,
+    selectedRoom,
+
+    roomId: selectedRoom?.id ?? "",
     selectedDate,
     setSelectedDate,
     selectedTimeSlot,

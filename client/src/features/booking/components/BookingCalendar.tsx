@@ -51,6 +51,7 @@ export default function BookingCalendar({
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+
   return (
     <div>
       {/* Month navigation */}

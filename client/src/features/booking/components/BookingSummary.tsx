@@ -2,10 +2,10 @@
  * BookingSummary — Presentational Component
  *
  * Shows the booking summary before proceeding to payment.
- * Displays: date, time range, price breakdown (US-02).
+ * 🆕 Ahora muestra nombre de sala y paquete elegido.
  */
 
-import { CalendarIcon, ClockIcon } from "lucide-react";
+import { CalendarIcon, ClockIcon, BuildingIcon, PackageIcon } from "lucide-react";
 import type { BookingSummary as BookingSummaryType } from "../models";
 
 interface BookingSummaryProps {
@@ -15,25 +15,38 @@ interface BookingSummaryProps {
 export default function BookingSummary({ summary }: BookingSummaryProps) {
   return (
     <div className="bg-white bg-opacity-10 backdrop-blur-sm p-4 rounded-lg mt-6">
-      <h4 className="text-sm font-medium text-white mb-2">Resumen</h4>
+      <h4 className="text-sm font-medium text-white mb-3">Resumen de tu reserva</h4>
 
+      {/* 🆕 Sala y paquete */}
       <div className="flex items-center mb-2">
-        <CalendarIcon className="h-5 w-5 text-white mr-2" />
-        <span className="text-white">{summary.formattedDate}</span>
+        <BuildingIcon className="h-4 w-4 text-white mr-2 opacity-80" />
+        <span className="text-white text-sm">{summary.roomName}</span>
+      </div>
+      <div className="flex items-center mb-2">
+        <PackageIcon className="h-4 w-4 text-white mr-2 opacity-80" />
+        <span className="text-white text-sm">{summary.packageName}</span>
       </div>
 
+      {/* Fecha y hora */}
       <div className="flex items-center mb-2">
-        <ClockIcon className="h-5 w-5 text-white mr-2" />
-        <span className="text-white">
-          {summary.startTime} - {summary.endTime}
+        <CalendarIcon className="h-4 w-4 text-white mr-2 opacity-80" />
+        <span className="text-white text-sm">{summary.formattedDate}</span>
+      </div>
+      <div className="flex items-center mb-2">
+        <ClockIcon className="h-4 w-4 text-white mr-2 opacity-80" />
+        <span className="text-white text-sm">
+          {summary.startTime} – {summary.endTime} ({summary.duration}h)
         </span>
       </div>
 
-      <div className="mt-2">
+      {/* Precio */}
+      <div className="border-t border-white border-opacity-20 mt-3 pt-3 flex justify-between items-baseline">
+        <span className="text-white text-xs opacity-70">
+          ${summary.pricePerHour}/hr × {summary.duration}h + IVA
+        </span>
         <span className="text-lg font-semibold text-white">
-          ${summary.total} MXN
+          ${summary.total.toFixed(2)} MXN
         </span>
-        <span className="text-sm text-white ml-1">+ IVA</span>
       </div>
     </div>
   );

@@ -8,14 +8,6 @@ const CLEANING_BUFFER_MS = 30 * 60 * 1000; // 30 minutos
 const MAINTENANCE_BUFFER_MS = 15 * 60 * 1000; // 15 minutos
 
 // ==========================================
-// FUNCIÓN RECUPERADA (HELPER)
-// ==========================================
-const generateAccessCode = (): string => {
-    // Genera un código aleatorio de 6 dígitos
-    return Math.floor(100000 + Math.random() * 900000).toString();
-};
-
-// ==========================================
 // 1. CREAR RESERVA
 // ==========================================
 export const createReservation = async (req: Request, res: Response): Promise<void> => {
@@ -30,42 +22,76 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        const { roomId, startTime, endTime, termsAccepted, acceptedVersion } = validation.data;
-        // Obtenemos ID del usuario (soporta diferentes estructuras de request)
-        const userId = (req as any).user?.userId || (req as any).user?.id;
-
-        const user = await prisma.user.findUnique({ where: { id: userId } });
-        const room = await prisma.room.findUnique({ where: { id: roomId } });
+        const { roomId, packageId, startTime, endTime, termsAccepted, acceptedVersion } = validation.data;
+        const userId = req.user?.userId || '';
+        
+        const [user, room] = await Promise.all([
+            prisma.user.findUnique({where: {id: userId} }),
+            prisma.room.findUnique({where: {id: roomId} }),
+        ]);
 
         if (!user || !room) {
-            res.status(400).json({ error: "Usuario o Sala no encontrados" });
+            res.status(404).json({ error: "Usuario o Sala no encontrados" });
             return;
         }
 
+        const pricePackage = await prisma.pricePackage.findFirst({
+            where: {
+                id: packageId,
+                isActive: true,
+                OR: [
+                    {roomId: roomId},
+                    {roomId: null}
+                ]
+            }
+        });
+
+        if(!pricePackage){
+            res.status(400).json({error: "El paquete seleccionado no es valido para esta sala"});
+            return;
+        }
+
+        const activeRate = await prisma.roomBaseRate.findFirst({
+            where: {
+                roomId: roomId,
+                effectiveFrom: {lte: startTime},
+                OR: [
+                    {effectiveUntil: null},
+                    {effectiveUntil: {gte: startTime}}
+                ]
+            },
+            orderBy: {effectiveFrom: 'desc'}
+        });
+
+        if(!activeRate){
+            res.status(400).json({error: "No existe una tarifa activa para esta sala. Contacta al administrador"});
+            return;
+        }
         // --- LÓGICA DE CONFLICTOS Y BUFFERS ---
         const mySafeStart = new Date(startTime.getTime() - CLEANING_BUFFER_MS);
         const myEffectiveEnd = new Date(endTime.getTime() + CLEANING_BUFFER_MS);
 
-        const conflictReservation = await prisma.reservation.findFirst({
-            where: {
-                roomId,
-                status: { not: 'CANCELLED' },
-                AND: [
-                    { start_time: { lt: myEffectiveEnd } },
-                    { end_time: { gt: mySafeStart } }
-                ]
-            }
-        });
-
-        const conflictBlock = await prisma.blockedSlot.findFirst({
-            where: {
-                roomId: roomId,
-                AND: [
-                    { start_time: { lt: myEffectiveEnd } },
-                    { end_time: { gt: new Date(startTime.getTime() - MAINTENANCE_BUFFER_MS) } }
-                ]
-            }
-        });
+        const [conflictReservation, conflictBlock] = await Promise.all([
+            prisma.reservation.findFirst({
+                where: {
+                    roomId,
+                    status: {not: 'CANCELLED'},
+                    AND: [
+                        {start_time: {lt: myEffectiveEnd}},
+                        {end_time: {gt: mySafeStart}}
+                    ]
+                }
+            }),
+            prisma.blockedSlot.findFirst({
+                where: {
+                    roomId,
+                    AND: [
+                        {start_time: {lt: myEffectiveEnd}},
+                        {end_time: {gt: new Date(startTime.getTime() - MAINTENANCE_BUFFER_MS)}}
+                    ]
+                }
+            })
+        ]);
 
         if (conflictReservation || conflictBlock) {
             res.status(409).json({
@@ -79,12 +105,8 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
         // --- CÁLCULO DE PRECIO ---
         const durationMs = endTime.getTime() - startTime.getTime();
         const durationHours = durationMs / (1000 * 60 * 60);
-        const totalAmount = Number(room.price_per_hour) * durationHours;
+        const totalAmount = Number(activeRate.hourlyRate) * durationHours;
 
-        // --- GENERACIÓN DE CÓDIGO (Aquí se usa la función recuperada) ---
-        const accessCode = generateAccessCode();
-
-        // --- CREACIÓN EN DB ---
         const newReservation = await prisma.reservation.create({
             data: {
                 userId: user.id,
@@ -95,7 +117,7 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
                 status: "PENDING",
                 access_code: null, // Se guarda null hasta que pague (o accessCode si prefieres guardarlo ya)
                 terms_accepted: termsAccepted,
-                accepted_terms_version: acceptedVersion
+                termsVersion: acceptedVersion
             },
         });
 
@@ -131,26 +153,28 @@ export const getReservationsByRange = async (req: Request, res: Response): Promi
             return;
         }
 
-        const start = new Date(`${startDate}T00:00:00`);
-        const end = new Date(`${endDate}T23:59:59`);
+        const start = new Date(`${startDate}T00:00:00-06:00`);
+        const end = new Date(`${endDate}T23:59:59-06:00`);
 
-        const reservations = await prisma.reservation.findMany({
-            where: {
+
+        const [reservations, blocks] = await Promise.all([
+           prisma.reservation.findMany({
+            where:{
                 roomId: String(roomId),
-                status: { not: "CANCELLED" },
-                start_time: { gte: start, lte: end }
+                status: {not: "CANCELLED"},
+                start_time: {gte: start, lte: end}
             },
-            include: { user: { select: { name: true, email: true } } }
-        });
-
-        const blocks = await prisma.blockedSlot.findMany({
+            include: {user: {select: {name: true, email: true}}}
+           }),
+           prisma.blockedSlot.findMany({
             where: {
                 roomId: String(roomId),
-                start_time: { gte: start, lte: end }
+                start_time: {gte: start, lte: end}
             }
-        });
-
+           })
+        ]);
         res.json({ reservations, blocks });
+
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Error obteniendo calendario" });
@@ -168,28 +192,28 @@ export const getReservationsByDate = async (req: Request, res: Response): Promis
             res.status(400).json({ error: 'Faltan parámetros roomId o date' });
             return;
         }
+        const startOfDay = new Date(`${date}T00:00:00-06:00`);
+        const endOfDay = new Date(`${date}T23:59:59-06:00`);
 
-        const startOfDay = new Date(`${date}T00:00:00`);
-        const endOfDay = new Date(`${date}T23:59:59`);
+        const [reservations, blocks] = await Promise.all([
+            prisma.reservation.findMany({
+                where: {
+                    roomId: String(roomId),
+                    status: { not: "CANCELLED" },
+                    start_time: { gte: startOfDay, lte: endOfDay }
+                },
+                select: { start_time: true, end_time: true, userId: true }
+            }),
+            prisma.blockedSlot.findMany({
+                where: {
+                    roomId: String(roomId),
+                    start_time: { gte: startOfDay, lte: endOfDay }
+                },
+                select: { start_time: true, end_time: true, reason: true }
+            })
+        ]);
 
-        const reservations = await prisma.reservation.findMany({
-            where: {
-                roomId: String(roomId),
-                status: { not: "CANCELLED" },
-                start_time: { gte: startOfDay, lte: endOfDay }
-            },
-            select: { start_time: true, end_time: true, userId: true }
-        });
-
-        const blocks = await prisma.blockedSlot.findMany({
-            where: {
-                roomId: String(roomId),
-                start_time: { gte: startOfDay, lte: endOfDay }
-            },
-            select: { start_time: true, end_time: true, reason: true }
-        });
-
-        const currentUserId = (req as any).user?.userId || (req as any).user?.id;
+        const currentUserId = req.user?.userId || '';
 
         const responseData = [
             ...reservations.map(r => ({
@@ -206,6 +230,7 @@ export const getReservationsByDate = async (req: Request, res: Response): Promis
         ];
 
         res.json(responseData);
+
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Error al obtener reservas' });
@@ -217,7 +242,7 @@ export const getReservationsByDate = async (req: Request, res: Response): Promis
 // ==========================================
 export const getMyReservations = async (req: Request, res: Response): Promise<void> => {
     try {
-        const userId = (req as any).user?.userId || (req as any).user?.id;
+        const userId = req.user?.userId || '';
 
         const myReservations = await prisma.reservation.findMany({
             where: {
@@ -232,8 +257,8 @@ export const getMyReservations = async (req: Request, res: Response): Promise<vo
 
         const dates = myReservations.map(r => r.start_time.toISOString().split('T')[0]);
         const uniqueDates = [...new Set(dates)];
-
         res.json(uniqueDates);
+
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Error obteniendo mis reservas' });

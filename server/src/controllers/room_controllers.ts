@@ -2,6 +2,14 @@ import { Request, Response } from "express";
 import { prisma } from '../config/prisma';
 import { roomSchema } from "../utils/validation";
 
+const getActiveRateFilter = () => ({
+    effectiveFrom: { lte: new Date() },
+    OR: [
+        { effectiveUntil: null },
+        { effectiveUntil: { gte: new Date() } }
+    ]
+});
+
 // * -------------------------------------------REGISTRAR NUEVAS SALAS--------------------------------------------
 
 export const createRoom = async (req: Request, res: Response): Promise<void> => {
@@ -28,7 +36,6 @@ export const createRoom = async (req: Request, res: Response): Promise<void> => 
                 status: status ?? "INACTIVO",
                 ttlock_lock_id: ttlock_lock_id || null,
                 amenities: amenities || ["wifi", "acceso_autonomo"],
-                // Por defecto asignamos la sucursal 1 si no se envía, ya que es la principal
                 locationId: locationId || 1 
             }
         });
@@ -74,7 +81,12 @@ export const getRooms = async (req: Request, res: Response) : Promise<void> =>{
             },
             include: {
                 baseRates: {
-                    where: { effectiveUntil: null } // Trae la tarifa base actual
+                    where:   getActiveRateFilter(),  // ← llamada a función, no constante
+                    orderBy: { effectiveFrom: 'desc' },
+                    take:    1
+                },
+            packages: {
+                    where: { isActive: true }
                 }
             }
         });
@@ -95,7 +107,9 @@ export const getRoomById = async (req: Request, res: Response) : Promise<void> =
             where: {id},
             include: {
                 baseRates: {
-                    where: { effectiveUntil: null }
+                    where:   getActiveRateFilter(),
+                    orderBy: { effectiveFrom: 'desc' },
+                    take:    1
                 },
                 packages: {
                     where: { isActive: true }
@@ -122,7 +136,7 @@ export const updateRoom = async (req: Request, res: Response) : Promise<void> =>
         const validation = roomSchema.partial().safeParse(req.body);
 
         if(!validation.success){
-            res.status(404).json({
+            res.status(400).json({
                 error: "Datos inválidos",
                 details: validation.error.format(),
             });

@@ -35,13 +35,15 @@ import DurationSelector from "./components/DurationSelector";
 import BookingSummary from "./components/BookingSummary";
 import CheckoutForm from "./components/CheckoutForm";
 import BookingConfirmation from "./components/BookingConfirmation";
+import RoomSelector from "./components/RoomSelector";
 
 // Stripe public key — in production, use env variable
-const stripePromise = loadStripe(
-  import.meta.env.VITE_STRIPE_PUBLIC_KEY ||
-    "pk_test_51SuGE6R7CcXcMDYUm8apqxqrXheiJOYSBHT6Do6JOhOYmElKCzlcbJgoiW3YUAt4qKzYdANmnXoVde4Q6LCfxyQU00e1smFJUy"
-);
+const stripekey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+if(!stripekey){
+  throw new Error("Falta VITE_STRIPE_PUBLIC_KEY en las variables de entorno.");
+}
 
+const stripePromise = loadStripe(stripekey);
 // ── Helper: format date for display ───────────────────────────
 const formatDate = (dateString: string): string => {
   if (!dateString) return "";
@@ -61,14 +63,7 @@ export default function Booking() {
 
   // Hooks — business logic lives HERE, not in JSX
   const flow = useBookingFlow();
-  const availability = useAvailability();
-
-  // Sync roomId from availability → flow
-  useEffect(() => {
-    if (availability.roomId) {
-      flow.setRoomId(availability.roomId);
-    }
-  }, [availability.roomId]);
+  const availability = useAvailability({roomId: flow.roomId});
 
   // Refresh availability when date changes
   useEffect(() => {
@@ -84,12 +79,29 @@ export default function Booking() {
     }
   }, [flow.clientSecret]);
 
+  // Paso 1 seleccionar sala_________________________-
+  // paso 1_seleccion de sla
+  const renderRoomStep = () => (
+    <RoomSelector
+    rooms={availability.rooms}
+    isLoading={availability.isLoadingRoom}
+    onSelectRoom={flow.goToDate}
+    />
+  );
+
   // ── Step: Date Selection ──────────────────────────────────
   const renderDateStep = () => (
     <div className="space-y-6">
+    <div className="flex items-center justify-between">
       <h3 className="text-lg font-medium text-white mb-4">
         Selecciona fecha y hora
       </h3>
+        <button
+          onClick={flow.goBackToRoom}
+          className="text-white text-sm opacity-60 hover:opacity-100 underline">
+          ← Cambiar sala
+        </button>
+      </div>
 
       <BookingCalendar
         selectedDate={flow.selectedDate}
@@ -207,6 +219,7 @@ export default function Booking() {
 
         <div className="bg-black bg-opacity-40 backdrop-blur-sm rounded-lg shadow-lg p-6">
           {/* Step content */}
+          {flow.currentStep === BOOKING_STEP.ROOM && renderRoomStep()}
           {flow.currentStep === BOOKING_STEP.DATE && renderDateStep()}
           {flow.currentStep === BOOKING_STEP.PAYMENT && renderPaymentStep()}
           {flow.currentStep === BOOKING_STEP.CONFIRMATION && flow.summary && (

@@ -3,15 +3,13 @@
  * BOOKING FEATURE — SERVICE (API Layer)
  * ══════════════════════════════════════════════════════════════
  *
- * Architecture: Repository layer that talks to the backend.
+ * Repository layer that talks to the backend.
  * This is the ONLY file that makes HTTP calls for booking.
  *
  * Controller (component) → Service (this) → Axios → Backend
- *
- * Scope Rule: LOCAL to booking feature.
  */
 
-import api from "@infrastructure/axios"; // Axios instance with auth interceptors
+import api from "@infrastructure/axios";
 import type {
   CreateReservationPayload,
   ExistingReservation,
@@ -24,20 +22,27 @@ interface CreateReservationResponse {
 }
 
 interface ReservationByDateResponse {
-  start_time: string;
-  end_time: string;
-}
-
-interface MyReservationDate {
-  date: string;
+  start: string;
+  end: string;
+  type: string;
 }
 
 /**
- * Fetch all available rooms from the system.
- * Currently returns a single room, but designed to scale (RNF-19).
+ * Fetch all active rooms.
+ * Ahora se usa para mostrar la lista en el paso de selección de sala.
  */
 export const fetchRooms = async (): Promise<Room[]> => {
   const response = await api.get<Room[]>("/rooms");
+  return response.data;
+};
+
+/**
+ * 🆕 Fetch a single room with its base rates and packages.
+ * Se llama cuando el usuario selecciona una sala para ver sus detalles.
+ * El backend devuelve include: { baseRates, packages } en GET /rooms/:id
+ */
+export const fetchRoomById = async (roomId: string): Promise<Room> => {
+  const response = await api.get<Room>(`/rooms/${roomId}`);
   return response.data;
 };
 
@@ -52,11 +57,13 @@ export const fetchReservationsByDate = async (
   const response = await api.get<ReservationByDateResponse[]>(
     `/reservations?roomId=${roomId}&date=${date}`
   );
-
-  return response.data.map((res) => ({
-    start: new Date(res.start_time),
-    end: new Date(res.end_time),
-  }));
+return response.data.map((res) => {
+    console.log("🔍 respuesta del backend:", res);
+    return {
+        start: new Date(res.start),
+        end:   new Date(res.end),
+    };
+  });
 };
 
 /**
@@ -70,7 +77,7 @@ export const fetchMyBookedDates = async (): Promise<string[]> => {
 
 /**
  * Create a new reservation and get the Stripe clientSecret for payment.
- * This is the core transaction — creates PENDING reservation + Stripe PaymentIntent.
+ * Ahora incluye packageId en el payload — requerido por el backend.
  */
 export const createReservation = async (
   payload: CreateReservationPayload
