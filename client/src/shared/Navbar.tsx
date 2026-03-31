@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../infrastructure/AuthContext';
 import { MenuIcon, XIcon, UserIcon, CalendarIcon, SettingsIcon, LogOutIcon, HomeIcon, InfoIcon, TagIcon } from 'lucide-react';
@@ -14,6 +14,22 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const isButtonClick = (event.target as HTMLElement).closest('button');
+      if(isMenuOpen && menuRef.current && !menuRef.current.contains(event.target as Node) && !isButtonClick){
+        setIsMenuOpen(false);
+      }
+    };
+    if(isMenuOpen){
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen]);
 
   // Detectar scroll
   useEffect(() => {
@@ -65,7 +81,11 @@ const Navbar: React.FC = () => {
         </div>
       </div>
       {/* Mobile and desktop menu (same content) */}
-      {isMenuOpen && <div className="bg-zinc-900/95 backdrop-blur-md shadow-lg absolute right-0 z-50 w-64 py-2 border border-zinc-800 rounded-b-lg">
+      {isMenuOpen && (
+        <div 
+          ref={menuRef}
+          className="bg-zinc-900/95 backdrop-blur-md shadow-lg absolute right-0 z-50 w-64 py-2 border border-zinc-800 rounded-b-lg"
+        >
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             <Link to="/" className="text-gray-300 hover:bg-zinc-800 hover:text-white block px-3 py-2 rounded-md text-base font-medium" onClick={() => setIsMenuOpen(false)}>
               <div className="flex items-center">
@@ -89,7 +109,7 @@ const Navbar: React.FC = () => {
             {/* --- LÓGICA DE USUARIO --- */}
             {isAuthenticated ? (
               <>
-                {/* 1. MI PANEL (Siempre visible si estás logueado) */}
+                {/* 1. MI PANEL */}
                 <Link to="/dashboard" className="text-gray-300 hover:bg-zinc-800 hover:text-white block px-3 py-2 rounded-md text-base font-medium" onClick={() => setIsMenuOpen(false)}>
                     <div className="flex items-center">
                       <UserIcon className="mr-2 h-5 w-5" />
@@ -97,7 +117,7 @@ const Navbar: React.FC = () => {
                     </div>
                 </Link>
 
-                {/* 2. PANEL ADMIN (Solo visible si eres Admin) */}
+                {/* 2. PANEL ADMIN */}
                 {isAdmin && (
                   <Link to="/admin" className="text-purple-300 hover:bg-zinc-800 hover:text-white block px-3 py-2 rounded-md text-base font-medium" onClick={() => setIsMenuOpen(false)}>
                     <div className="flex items-center">
@@ -146,7 +166,7 @@ const Navbar: React.FC = () => {
             )}
           </div>
         </div>
-      }
+      )}
     </nav>
 };
 

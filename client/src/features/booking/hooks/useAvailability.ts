@@ -45,7 +45,7 @@ interface UseAvailabilityReturn {
   getAvailableTimeSlots: (date: string) => string[];
   isSlotAvailable: (date: string, time: string, duration: number) => boolean;
   hasDayReservations: (day: Date) => boolean;
-
+  isDayValidForPlan: (dateStr: string, requiredHours: number) => boolean;
   // Refresh
   refreshAvailability: (date: string) => Promise<void>;
   refreshMyBookings: () => Promise<void>;
@@ -138,24 +138,37 @@ export const useAvailability = ({roomId}: UseAvailabilityProps): UseAvailability
     return slots;
   };
 
-  // ── Check if a specific slot is available ───────────────────
-  // Implements US-01: 30-minute cleaning buffer after each reservation
+// ── Check if a specific slot is available ───────────────────
   const isSlotAvailable = (dateStr: string, timeStr: string, duration: number): boolean => {
-    if (existingReservations.length === 0) return true;
-
     const proposedStart = new Date(`${dateStr}T${timeStr}:00`);
     const proposedEnd = new Date(proposedStart);
-    proposedEnd.setHours(proposedEnd.getHours() + duration);
+    
+    // 🚀 FIX CRÍTICO: Forzamos que la duración sea un número y sumamos MINUTOS.
+    // Esto evita la concatenación de strings ("812") y soporta fracciones (1.5h).
+    const numericDuration = Number(duration) || 1; 
+    proposedEnd.setMinutes(proposedEnd.getMinutes() + (numericDuration * 60));
 
-    const cleaningBufferMs =
-      BOOKING_CONFIG.CLEANING_BUFFER_MINUTES * 60 * 1000;
+    // 1. REGLA DE ORO (El límite de la cancha): 
+    // La reserva en sí misma NO puede terminar después del cierre
+    const closingTime = new Date(`${dateStr}T${String(BOOKING_CONFIG.OPERATION_END_HOUR).padStart(2, '0')}:00:00`);
+    
+    if (proposedEnd.getTime() > closingTime.getTime()) {
+      return false; // Si termina después del cierre, bloqueamos.
+    }
+
+    // Si pasamos el filtro del cierre y no hay reservas previas, la cancha es libre
+    if (existingReservations.length === 0) return true;
+
+    // 2. REVISIÓN DE CHOQUES (Los defensas con buffer):
+    const cleaningBufferMs = BOOKING_CONFIG.CLEANING_BUFFER_MINUTES * 60 * 1000;
 
     return !existingReservations.some((reservation) => {
-        const start = reservation.start instanceof Date ? reservation.start : new Date(reservation.start);
-        const end = reservation.end instanceof Date ? reservation.end : new Date(reservation.end);
+      const start = reservation.start instanceof Date ? reservation.start : new Date(reservation.start);
+      const end = reservation.end instanceof Date ? reservation.end : new Date(reservation.end);
 
-        const busyStart = start.getTime() - cleaningBufferMs;
-        const busyEnd = end.getTime() + cleaningBufferMs;
+      // Expandimos la "sombra" de la reserva existente para incluir limpieza
+      const busyStart = start.getTime() - cleaningBufferMs;
+      const busyEnd = end.getTime() + cleaningBufferMs;
         
       return (
         proposedStart.getTime() < busyEnd && 
@@ -163,7 +176,15 @@ export const useAvailability = ({roomId}: UseAvailabilityProps): UseAvailability
       );
     });
   };
+  
 
+    // Esta función debe verificar si existe AL MENOS un espacio donde quepa el plan completo
+    const isDayValidForPlan = (dateStr: string, requiredHours: number): boolean => {
+      //console.log(`\n📅 3. EVALUANDO DÍA: ${dateStr} para ${requiredHours} horas`);
+      const slots = getAvailableTimeSlots(dateStr);
+      //console.log(`🕒 4. Slots generados para el día:`, slots.length > 0 ? slots : "NINGUNO (Día bloqueado por getAvailableTimeSlots)");
+      return slots.some(slot => isSlotAvailable(dateStr, slot, requiredHours))
+    };
   // ── Check if a calendar day has any reservations ────────────
   const hasDayReservations = (day: Date): boolean => {
     const calendarStr = day.toISOString().split("T")[0];
@@ -185,5 +206,6 @@ export const useAvailability = ({roomId}: UseAvailabilityProps): UseAvailability
     hasDayReservations,
     refreshAvailability,
     refreshMyBookings,
+    isDayValidForPlan,
   };
 };

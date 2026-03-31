@@ -10,6 +10,8 @@ const UserManagement: React.FC = () => {
   const [showAddHoursModal, setShowAddHoursModal] = useState(false);
   const [hoursToAdd, setHoursToAdd] = useState(1);
   const [filterActive, setFilterActive] = useState(false);
+  const [showAddAdminModal, setShowAddAdminModal] = useState(false);
+  const [newAdminData, setNewAdminData] = useState({ name: '', email: '', password: '', role: 'ADMIN' });
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -17,7 +19,7 @@ const UserManagement: React.FC = () => {
         setLoading(true);
         const response = await api.get('/admin/users-with-reservations');
         const now = new Date();
-
+        
         const processedUsers = response.data.map((user: any) => {
           const userReservations = user.reservations || [];
 
@@ -32,6 +34,7 @@ const UserManagement: React.FC = () => {
             new Date(res.start_time) > now && res.status === 'PAID'
           );
 
+          
           // Horas Pendientes
           const pendingHours = activeReservationsList.reduce((acc: number, res: any) => {
             const duration = (new Date(res.end_time).getTime() - new Date(res.start_time).getTime()) / (1000 * 60 * 60);
@@ -68,9 +71,63 @@ const UserManagement: React.FC = () => {
     fetchUserData();
   }, []);
 
-  const handleAddHours = () => {
-    setShowAddHoursModal(false);
-    alert(`Se han agregado ${hoursToAdd} horas al usuario ${selectedUser?.name} exitosamente.`);
+// HANDLE CREATE ADMIN CORREGIDO
+  const handleCreateAdmin = async () => {
+    if (!newAdminData.name || !newAdminData.email || !newAdminData.password) {
+      alert("Por favor rellena todos los campos");
+      return;
+    }
+
+    try {
+      await api.post('/admin/create-user', newAdminData);
+      alert(`¡Éxito! El administrador ${newAdminData.name} ha sido creado.`);
+      setShowAddAdminModal(false);
+      setNewAdminData({ name: '', email: '', password: '', role: 'ADMIN' });
+      
+      // Solo recargamos, no necesitamos guardar la respuesta en una variable
+      window.location.reload(); 
+    } catch (error: any) {
+      alert(error.response?.data?.error || "Error al crear el administrador");
+    }
+  };
+
+const handleAddHours = async () => {
+    if (!selectedUser) return;
+
+    // Forzamos a que sea un número entero para cumplir la regla
+    const horasEnteras = Math.floor(Number(hoursToAdd));
+    
+    if (horasEnteras <= 0) {
+        alert("Por favor, ingresa un número de horas válido (mínimo 1 hora completa).");
+        return;
+    }
+
+    // Obtenemos el texto del motivo
+    const reasonInput = document.getElementById('reason') as HTMLTextAreaElement;
+    const description = reasonInput?.value || "Cortesía Administrativa";
+
+    try {
+      // AQUÍ LE PEGAMOS A LA RUTA QUE YA EXISTE EN TU BACKEND
+      await api.post('/admin/assign-discount', {
+        userId: selectedUser.id,
+        hours: horasEnteras,
+        description: description
+      });
+
+      // Si todo sale bien
+      alert(`¡Éxito! Se asignaron ${horasEnteras}h a ${selectedUser.name} y se le envió su código por correo.`);
+      
+      setShowAddHoursModal(false);
+      setHoursToAdd(1);
+      if (reasonInput) reasonInput.value = '';
+
+      // Opcional: recargar para ver el cambio
+      window.location.reload(); 
+
+    } catch (error: any) {
+      console.error("Error al asignar descuento:", error);
+      alert(error.response?.data?.error || "Error al asignar el beneficio.");
+    }
   };
 
   const displayedUsers = useMemo(() => {
@@ -94,6 +151,14 @@ const UserManagement: React.FC = () => {
   return <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <div className="flex justify-between items-center mb-8">
         <h1 className="font-makron text-3xl font-bold text-background">Gestión de Usuarios</h1>
+        {/* 🚀 BOTÓN NUEVO */}
+        <button 
+          onClick={() => setShowAddAdminModal(true)}
+          className="bg-zinc-700 hover:bg-zinc-600 text-white px-4 py-2 rounded-md flex items-center transition-colors text-sm font-medium border border-zinc-600"
+        >
+          <PlusIcon className="h-4 w-4 mr-2" />
+          Nuevo Administrador
+        </button>
       </div>
       
       <div className="bg-zinc-900 rounded-lg shadow-lg p-6 mb-8">
@@ -248,29 +313,104 @@ const UserManagement: React.FC = () => {
           </div>
         </div>}
 
-      {showAddHoursModal && selectedUser && <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 backdrop-blur-sm">
+     {showAddHoursModal && selectedUser && <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 backdrop-blur-sm">
           <div className="bg-zinc-900 rounded-lg shadow-xl max-w-md w-full p-6 border border-zinc-800">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-medium text-white">Agregar Horas</h3>
+              <h3 className="text-lg font-medium text-white">Asignar Beneficio (Código de Horas)</h3>
               <button onClick={() => setShowAddHoursModal(false)} className="text-gray-400 hover:text-white"><XCircleIcon className="h-5 w-5" /></button>
             </div>
             <div className="mb-6">
-              <p className="text-gray-300 mb-4">Agregando horas manualmente para: <span className="font-medium text-white">{selectedUser.name}</span></p>
+              <p className="text-gray-300 mb-4">Generando código de cortesía para: <span className="font-medium text-white">{selectedUser.name}</span></p>
               <div className="mb-4">
-                <label htmlFor="hours" className="block text-sm font-medium text-gray-300 mb-1">Cantidad de horas</label>
-                <input type="number" id="hours" min="1" value={hoursToAdd} onChange={e => setHoursToAdd(Number(e.target.value))} className="bg-zinc-800 block w-full py-2 px-3 rounded-md border border-zinc-700 focus:ring-gray-500 focus:border-gray-500 text-white" />
+                <label htmlFor="hours" className="block text-sm font-medium text-gray-300 mb-1">Cantidad de horas (Solo enteras)</label>
+                <input 
+                  type="number" 
+                  id="hours" 
+                  min="1" 
+                  step="1" 
+                  value={hoursToAdd} 
+                  onChange={e => setHoursToAdd(Math.max(1, Math.floor(Number(e.target.value))))} 
+                  className="bg-zinc-800 block w-full py-2 px-3 rounded-md border border-zinc-700 focus:ring-gray-500 focus:border-gray-500 text-white" 
+                />
               </div>
               <div>
-                <label htmlFor="reason" className="block text-sm font-medium text-gray-300 mb-1">Motivo (opcional)</label>
-                <textarea id="reason" rows={3} className="bg-zinc-800 block w-full py-2 px-3 rounded-md border border-zinc-700 focus:ring-gray-500 focus:border-gray-500 text-white" placeholder="Ej: Compensación por falla técnica"></textarea>
+                <label htmlFor="reason" className="block text-sm font-medium text-gray-300 mb-1">Motivo (opcional - se guarda en el código)</label>
+                <textarea 
+                  id="reason" 
+                  rows={3} 
+                  className="bg-zinc-800 block w-full py-2 px-3 rounded-md border border-zinc-700 focus:ring-gray-500 focus:border-gray-500 text-white" 
+                  placeholder="Ej: Compensación por falla técnica"
+                ></textarea>
               </div>
             </div>
             <div className="flex justify-end space-x-3">
               <button onClick={() => setShowAddHoursModal(false)} className="px-4 py-2 border border-zinc-700 rounded-md text-gray-300 hover:bg-zinc-800">Cancelar</button>
-              <button onClick={handleAddHours} className="px-4 py-2 bg-zinc-600 hover:bg-zinc-500 border border-transparent rounded-md text-white transition-colors">Confirmar</button>
+              <button onClick={handleAddHours} className="px-4 py-2 bg-zinc-600 hover:bg-zinc-500 border border-transparent rounded-md text-white transition-colors">Generar y Enviar Correo</button>
             </div>
           </div>
-        </div>}
+        </div>
+      }
+      {/* 🚀 MODAL PARA NUEVO ADMIN */}
+      {showAddAdminModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[60] backdrop-blur-sm p-4">
+          <div className="bg-zinc-900 rounded-lg shadow-xl max-w-md w-full p-6 border border-zinc-800 animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-medium text-white">Registrar Nuevo Administrador</h3>
+              <button onClick={() => setShowAddAdminModal(false)} className="text-gray-400 hover:text-white">
+                <XCircleIcon className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Nombre Completo</label>
+                <input 
+                  type="text" 
+                  value={newAdminData.name}
+                  onChange={e => setNewAdminData({...newAdminData, name: e.target.value})}
+                  className="bg-zinc-800 block w-full py-2 px-3 rounded-md border border-zinc-700 text-white focus:ring-1 focus:ring-gray-500 outline-none"
+                  placeholder="Ej: Juan Pérez"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Correo Electrónico</label>
+                <input 
+                  type="email" 
+                  value={newAdminData.email}
+                  onChange={e => setNewAdminData({...newAdminData, email: e.target.value})}
+                  className="bg-zinc-800 block w-full py-2 px-3 rounded-md border border-zinc-700 text-white focus:ring-1 focus:ring-gray-500 outline-none"
+                  placeholder="admin@specmeet.com"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Contraseña Temporal</label>
+                <input 
+                  type="password" 
+                  value={newAdminData.password}
+                  onChange={e => setNewAdminData({...newAdminData, password: e.target.value})}
+                  className="bg-zinc-800 block w-full py-2 px-3 rounded-md border border-zinc-700 text-white focus:ring-1 focus:ring-gray-500 outline-none"
+                  placeholder="••••••••"
+                />
+              </div>
+              <p className="text-[10px] text-gray-500 italic mt-2">
+                * El usuario se registrará con el rol ADMIN por defecto. Podrá iniciar sesión inmediatamente con estas credenciales.
+              </p>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-8">
+              <button onClick={() => setShowAddAdminModal(false)} className="px-4 py-2 border border-zinc-700 rounded-md text-gray-300 hover:bg-zinc-800 text-sm">
+                Cancelar
+              </button>
+              <button 
+                onClick={handleCreateAdmin}
+                className="px-4 py-2 bg-white text-black font-bold rounded-md hover:bg-gray-200 transition-colors text-sm"
+              >
+                Crear Administrador
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>;
 };
 

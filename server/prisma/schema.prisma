@@ -18,6 +18,7 @@ model User {
   resetPasswordToken  String?       @unique
   updatedAt           DateTime      @updatedAt
   resetPasswordExpire DateTime?
+  discountCodes DiscountCode[]
   reservations        Reservation[]
 }
 
@@ -44,10 +45,17 @@ model Reservation {
   id             String       @id @default(uuid())
   userId         String
   roomId         String
+
+  isExtension Boolean @default(false)
+  parentReservationId String? 
+  
+  discountCodeId String?
+  discountCode DiscountCode? @relation(fields: [discountCodeId], references: [id])
+
   start_time     DateTime
   end_time       DateTime
   access_code    String?
-  total_paid     Decimal
+  total_paid     Decimal @db.Decimal(10, 2)
   status         String       @default("PENDING")
   createdAt      DateTime     @default(now())
   terms_accepted Boolean      @default(false)
@@ -58,6 +66,7 @@ model Reservation {
   room           Room         @relation(fields: [roomId], references: [id])
   user           User         @relation(fields: [userId], references: [id])
 
+  @@index([userId])
   @@index([roomId, start_time, end_time])
 }
 
@@ -76,12 +85,12 @@ model BlockedSlot {
 model Payment {
   id            String      @id @default(uuid())
   reservationId String      @unique
-  amount        Decimal
+  amount        Decimal @db.Decimal(10,2)
   provider_id   String
   status        String
   iva_breakdown String?
   createdAt     DateTime    @default(now())
-  currency      String      @default("MXN")
+  currency      String      @default("MXN") @db.Char(3)
   paymentMethod String?
   reservation   Reservation @relation(fields: [reservationId], references: [id])
 }
@@ -120,16 +129,35 @@ model RoomBaseRate {
 }
 
 model BusinessConfig {
-  id                 Int      @id @default(1)
+  id                 Int      @id @default(autoincrement())
   locationName       String   @default("SPEC.MEET Central")
   address            String
   accessInstructions String?
   openingHours       Json
+
+  taxRate Decimal @default(0.16) @db.Decimal(5,2)
+
   refundFullHours    Int      @default(24)
   refundPartialHours Int      @default(12)
   refundPartialPct   Int      @default(50)
+  cleaningBufferMinutes Int @default(30)
   updatedAt          DateTime @updatedAt
   rooms              Room[]
+}
+
+model DiscountCode {
+  id              String        @id @default(uuid())
+  code            String        @unique // Ej: GIFT-FREE-2H
+  hours           Int           // Cuántas horas otorga
+  description     String?
+  isUsed          Boolean       @default(false)
+  userId          String?       // Opcional: si se asigna a un usuario específico
+  user            User?         @relation(fields: [userId], references: [id])
+  createdAt       DateTime      @default(now())
+  expiresAt       DateTime?
+  
+  // Relación con la reserva donde se canjeó
+  reservations    Reservation[]
 }
 
 model TermsConfig {

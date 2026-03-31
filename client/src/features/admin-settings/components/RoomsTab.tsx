@@ -35,6 +35,7 @@ interface RoomFormData {
   wifi_pass: string;
   status: string;
   amenities: string[];
+  ttlock_lock_id: string;
 }
 
 const EMPTY_FORM: RoomFormData = {
@@ -44,6 +45,7 @@ const EMPTY_FORM: RoomFormData = {
   wifi_pass: "",
   status: "ACTIVO",
   amenities: [],
+  ttlock_lock_id: "",
 };
 
 const AMENITY_OPTIONS = [
@@ -100,6 +102,7 @@ export default function RoomsTab({
       wifi_pass: room.wifi_pass,
       status: room.status,
       amenities: Array.isArray(room.amenities) ? room.amenities : [],
+      ttlock_lock_id: room.ttlock_lock_id || "",
     });
     setEditingRoom(room);
     setShowModal(true);
@@ -326,6 +329,19 @@ export default function RoomsTab({
                     placeholder="Password"
                   />
                 </div>
+              </div>
+              
+              {/* TTLock ID */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+                  ID de Cerradura TTLock (Opcional)
+                </label>
+                <input
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white placeholder-gray-500 focus:ring-purple-500 focus:border-purple-500"
+                  value={form.ttlock_lock_id}
+                  onChange={(e) => setForm((f) => ({ ...f, ttlock_lock_id: e.target.value }))}
+                  placeholder="Ej: 12345678"
+                />
               </div>
 
               {/* Amenities */}

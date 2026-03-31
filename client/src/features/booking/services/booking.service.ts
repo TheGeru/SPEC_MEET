@@ -2,11 +2,6 @@
  * ══════════════════════════════════════════════════════════════
  * BOOKING FEATURE — SERVICE (API Layer)
  * ══════════════════════════════════════════════════════════════
- *
- * Repository layer that talks to the backend.
- * This is the ONLY file that makes HTTP calls for booking.
- *
- * Controller (component) → Service (this) → Axios → Backend
  */
 
 import api from "@infrastructure/axios";
@@ -16,8 +11,9 @@ import type {
   Room,
 } from "../models";
 
+// 🆕 Actualizamos la respuesta para que coincida con lo que el backend envía ahora
 interface CreateReservationResponse {
-  clientSecret: string;
+  clientSecret?: string; // Es opcional porque si el total es $0 (Gift Card), no hay secret
   reservationId: string;
 }
 
@@ -27,29 +23,16 @@ interface ReservationByDateResponse {
   type: string;
 }
 
-/**
- * Fetch all active rooms.
- * Ahora se usa para mostrar la lista en el paso de selección de sala.
- */
 export const fetchRooms = async (): Promise<Room[]> => {
   const response = await api.get<Room[]>("/rooms");
   return response.data;
 };
 
-/**
- * 🆕 Fetch a single room with its base rates and packages.
- * Se llama cuando el usuario selecciona una sala para ver sus detalles.
- * El backend devuelve include: { baseRates, packages } en GET /rooms/:id
- */
 export const fetchRoomById = async (roomId: string): Promise<Room> => {
   const response = await api.get<Room>(`/rooms/${roomId}`);
   return response.data;
 };
 
-/**
- * Fetch existing reservations for a specific room and date.
- * Used to calculate available time slots.
- */
 export const fetchReservationsByDate = async (
   roomId: string,
   date: string
@@ -57,27 +40,20 @@ export const fetchReservationsByDate = async (
   const response = await api.get<ReservationByDateResponse[]>(
     `/reservations?roomId=${roomId}&date=${date}`
   );
-return response.data.map((res) => {
-    console.log("🔍 respuesta del backend:", res);
-    return {
-        start: new Date(res.start),
-        end:   new Date(res.end),
-    };
-  });
+  return response.data.map((res) => ({
+    start: new Date(res.start),
+    end:   new Date(res.end),
+  }));
 };
 
-/**
- * Fetch dates where the current user has bookings.
- * Used to highlight "my reservations" in the calendar.
- */
 export const fetchMyBookedDates = async (): Promise<string[]> => {
   const response = await api.get<string[]>("/reservations/my-reservations");
   return response.data;
 };
 
 /**
- * Create a new reservation and get the Stripe clientSecret for payment.
- * Ahora incluye packageId en el payload — requerido por el backend.
+ * Create a new reservation.
+ * 🆕 Ahora soporta implícitamente discountCodeId porque viene en el payload.
  */
 export const createReservation = async (
   payload: CreateReservationPayload
@@ -86,5 +62,19 @@ export const createReservation = async (
     "/reservations",
     payload
   );
+  return response.data;
+};
+
+/**
+ * 🆕 EXTENDER RESERVA (Lo último que añadimos para el Dashboard)
+ * Permite al usuario pagar por tiempo extra desde su panel.
+ */
+export const extendReservation = async (
+  reservationId: string, 
+  additionalHours: number
+): Promise<{ clientSecret: string; totalAmount: number }> => {
+  const response = await api.post(`/reservations/${reservationId}/extend`, {
+    additionalHours
+  });
   return response.data;
 };

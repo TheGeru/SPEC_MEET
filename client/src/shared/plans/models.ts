@@ -17,5 +17,7 @@ export interface PublicPackageData {
   description?: string;
   billingUnit: string;
   price: number;
+  minDuration?: number;
+  maxDuration?: number
   metadata: any; 
 }

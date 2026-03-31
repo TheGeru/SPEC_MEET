@@ -14,6 +14,9 @@ interface BookingCalendarProps {
   myBookedDates: string[];
   onSelectDate: (dateStr: string) => void;
   hasDayReservations: (day: Date) => boolean;
+  isPlanFlow: boolean;
+  selectedDuration: number;
+  isDayValidForPlan: (dateStr: string, requiredHours: number) => boolean;
 }
 
 const WEEKDAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
@@ -23,6 +26,9 @@ export default function BookingCalendar({
   myBookedDates,
   onSelectDate,
   hasDayReservations,
+  isPlanFlow,
+  selectedDuration,
+  isDayValidForPlan,
 }: BookingCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
@@ -106,6 +112,16 @@ export default function BookingCalendar({
           }
 
           const dateString = day.toISOString().split("T")[0];
+
+          const isPast = day < today;
+          let isPlanInvalid = false;
+
+          if(isPlanFlow && selectedDuration > 0){
+            isPlanInvalid = !isDayValidForPlan(dateString, selectedDuration);
+          }
+
+          const isDisabled = isPast || isPlanInvalid;
+
           const isSelected = dateString === selectedDate;
           const isToday =
             day.getDate() === new Date().getDate() &&
@@ -118,12 +134,14 @@ export default function BookingCalendar({
             <div
               key={day.toString()}
               className={`h-20 p-1 rounded-md overflow-hidden cursor-pointer relative border transition-all
+                ${isDisabled 
+                  ? "opacity-20 grayscale pointer-events-none cursor-not-allowed" 
+                  : "cursor-pointer hover:bg-white hover:bg-opacity-15"}
                 ${isSelected ? "bg-white bg-opacity-30 border-white border-opacity-50" : ""}
                 ${isToday && !isSelected ? "bg-white bg-opacity-10 border-blue-400 border-opacity-50" : ""}
-                ${!isSelected && !isToday ? "bg-white bg-opacity-5 border-transparent" : ""}
-                ${!isSelected ? "hover:bg-white hover:bg-opacity-15" : ""}
+                ${!isSelected && !isToday && !isDisabled ? "bg-white bg-opacity-5 border-transparent" : ""}
               `}
-              onClick={() => onSelectDate(dateString)}
+              onClick={() => !isDisabled && onSelectDate(dateString)}
             >
               <div
                 className={`text-right p-1 text-sm ${
@@ -132,7 +150,6 @@ export default function BookingCalendar({
               >
                 {day.getDate()}
               </div>
-
               <div className="flex flex-col gap-1 items-start pl-1">
                 {isMyBooking && (
                   <div className="px-1.5 py-0.5 text-[10px] bg-blue-500 text-white rounded shadow-sm font-medium w-full truncate">

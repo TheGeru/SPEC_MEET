@@ -46,3 +46,21 @@ export const constructEvent = (payload: any, signature: string) => {
         process.env.STRIPE_WEBHOOK_SECRET
     );
 };
+
+/**
+ * Crear reembolso de Stripe
+ * @param paymentIntentId El ID del pago (pi_XXX) guardado en la tabla Payment
+ * @param amount Monto opcional en PESOS (si no se envía, Stripe reembolsa el total)
+ */
+
+export const createRefund = async(paymentIntentId: string, amount?: number) =>{
+    const refundOptions: Stripe.RefundCreateParams = {
+        payment_intent: paymentIntentId,
+    };
+
+    if(amount){
+        refundOptions.amount =  Math.round(amount * 100);
+    }
+
+    return await stripe.refunds.create(refundOptions);
+}

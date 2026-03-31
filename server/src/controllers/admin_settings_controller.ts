@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/prisma';
-
+import { sendGiftCardEmail } from '../services/email.service';
+import { createGiftCard } from '../services/discount.service';
+import { sendEmail } from '../services/email.service';
 // ==========================================
 // 1. GESTIÓN DE NEGOCIO (Ubicación, Horarios, Reembolsos)
 // ==========================================
@@ -424,5 +426,35 @@ export const deleteBlockedSlot = async (req: Request, res: Response): Promise<vo
     } catch (error) {
         console.error("Error eliminando bloqueo:", error);
         res.status(500).json({ error: "Error al eliminar el bloqueo" });
+    }
+};
+
+export const assignDiscountToUser = async (req: Request, res: Response) => {
+    try {
+        const { userId, hours, description } = req.body;
+
+        // 1. Crear el código en la base de datos (usando el service de discount)
+        const discount = await createGiftCard(userId, hours, description);
+
+        // 2. Notificar por correo (usando el service de email)
+        if (discount.user) {
+            await sendGiftCardEmail(
+                discount.user.email,
+                discount.user.name,
+                discount.code,
+                discount.hours,
+                discount.expiresAt!,
+                description
+            );
+        }
+
+        res.status(201).json({ 
+            message: "Beneficio asignado y correo enviado.", 
+            code: discount.code 
+        });
+
+    } catch (error) {
+        console.error("Error en assignDiscountToUser:", error);
+        res.status(500).json({ error: "No se pudo asignar el beneficio." });
     }
 };

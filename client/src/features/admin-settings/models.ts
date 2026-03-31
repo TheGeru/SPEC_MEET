@@ -209,6 +209,7 @@ export const roomCreateSchema = z.object({
   status: z.string().default("ACTIVO"),
   amenities: z.array(z.string()).default([]),
   locationId: z.number().int(),
+  ttlock_lock_id: z.string().nullable().default(null),
 });
 
 export type RoomCreatePayload = z.infer<typeof roomCreateSchema>;

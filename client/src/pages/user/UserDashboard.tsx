@@ -4,9 +4,10 @@ import { useAuth } from '../../context/AuthContext';
 import {
   CalendarIcon, ClockIcon, KeyIcon, CheckCircleIcon,
   XCircleIcon, AlertCircleIcon, TagIcon, Loader2,
-  CopyIcon, FileTextIcon, PlusCircleIcon, InfoIcon
+  CopyIcon, PlusCircleIcon, InfoIcon
 } from 'lucide-react';
 import api from '../../api/axios';
+import ExtensionPaymentModal from '@features/booking/components/ExtensionPaymentModal';
 
 // ─── Tipos ───────────────────────────────────────────────────
 interface Reservation {
@@ -245,91 +246,6 @@ const ExtendModal: React.FC<{
   );
 };
 
-// ─── Modal: Solicitar Factura ─────────────────────────────────
-const InvoiceModal: React.FC<{
-  reservation: Reservation;
-  onConfirm: (data: InvoiceForm) => void;
-  onClose: () => void;
-  loading: boolean;
-}> = ({ reservation, onConfirm, onClose, loading }) => {
-  const [form, setForm] = useState({ rfc: '', razon_social: '', uso_cfdi: 'G03', email_factura: '' });
-  const [err, setErr] = useState('');
-
-  const handleSubmit = () => {
-    if (!form.rfc.trim() || !form.razon_social.trim() || !form.email_factura.trim()) {
-      setErr('RFC, Razón Social y Email son obligatorios');
-      return;
-    }
-    setErr('');
-    onConfirm(form);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-      <div className="bg-zinc-900 border border-white/10 rounded-xl max-w-sm w-full p-6 shadow-2xl">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-white">Solicitar Factura</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white">
-            <XCircleIcon className="h-5 w-5" />
-          </button>
-        </div>
-        <p className="text-gray-400 text-xs mb-4">
-          Reserva del {new Date(reservation.date).toLocaleDateString('es-ES')} · ${reservation.totalAmount.toFixed(2)} MXN
-        </p>
-        <div className="space-y-3 mb-4">
-          {[
-            { label: 'RFC *', key: 'rfc', placeholder: 'XAXX010101000' },
-            { label: 'Razón Social *', key: 'razon_social', placeholder: 'Nombre o empresa' },
-            { label: 'Email para factura *', key: 'email_factura', placeholder: 'facturacion@empresa.com' },
-          ].map(f => (
-            <div key={f.key}>
-              <label className="block text-xs text-gray-400 mb-1">{f.label}</label>
-              <input
-                type="text" placeholder={f.placeholder}
-                value={(form as any)[f.key]}
-                onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-white/30"
-              />
-            </div>
-          ))}
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Uso CFDI</label>
-            <select
-              value={form.uso_cfdi}
-              onChange={e => setForm(p => ({ ...p, uso_cfdi: e.target.value }))}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-white/30"
-            >
-              <option value="G03">G03 – Gastos en general</option>
-              <option value="S01">S01 – Sin efectos fiscales</option>
-              <option value="D10">D10 – Servicios educativos</option>
-            </select>
-          </div>
-        </div>
-        {err && <p className="text-red-400 text-xs mb-3">{err}</p>}
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm border border-white/10 transition-all"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="flex-1 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium border border-white/20 transition-all disabled:opacity-50"
-          >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Solicitar'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-interface InvoiceForm {
-  rfc: string; razon_social: string; uso_cfdi: string; email_factura: string;
-}
-
 // ─── Toast ───────────────────────────────────────────────────
 const Toast: React.FC<{ msg: string; type: 'success' | 'error'; onClose: () => void }> = ({ msg, type, onClose }) => (
   <div className={`fixed bottom-5 right-5 z-50 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium shadow-2xl border backdrop-blur-sm
@@ -351,14 +267,16 @@ const UserDashboard: React.FC = () => {
   const [detailRes, setDetailRes]   = useState<Reservation | null>(null);
   const [cancelRes, setCancelRes]   = useState<Reservation | null>(null);
   const [extendRes, setExtendRes]   = useState<Reservation | null>(null);
-  const [invoiceRes, setInvoiceRes] = useState<Reservation | null>(null);
-
+  const [extensionClientSecret, setExtensionClientSecret] = useState<string | null>(null);
+  const [extendingAmount, setExtendingAmount] = useState<number>(0); // Para mostrar cuánto va a pagar  
   // Loading por acción
   const [actionLoading, setActionLoading] = useState(false);
 
   // Toast
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-
+  
+  const [discounts, setDiscounts] = useState<any[]>([]); // Puedes definir una interfaz luego
+  
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4000);
@@ -368,10 +286,17 @@ const UserDashboard: React.FC = () => {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get('/dashboard/user-stats');
-      setData(response.data);
+      const [statsRes, discountsRes] = await Promise.all([
+        api.get('/dashboard/user-stats'),
+        api.get('/user/my-discounts')
+      ]);
+
+      setData(statsRes.data);
+      setDiscounts(discountsRes.data);
+
     } catch (error) {
       console.error('Error cargando dashboard:', error);
+      showToast('No se pudieron cargar todos los datos del panel', 'error');
     } finally {
       setLoading(false);
     }
@@ -380,11 +305,11 @@ const UserDashboard: React.FC = () => {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   // ── Cancelar reserva ───────────────────────────────────────
-  const handleCancel = async () => {
-    if (!cancelRes) return;
+  const handleCancel = async (reservationId: string) => {
+    if (!window.confirm("¿Estas seguro de que deseas cancelar esta reserva? Se aplicaran las politicas de reembolso")) return;
     try {
       setActionLoading(true);
-      await api.patch(`/user/reservations/${cancelRes.id}/cancel`);
+      await api.post(`/cancellations/${reservationId}/cancel`);      
       showToast('Reserva cancelada. Revisa tu email para el reembolso.');
       setCancelRes(null);
       fetchData();
@@ -400,28 +325,19 @@ const UserDashboard: React.FC = () => {
     if (!extendRes) return;
     try {
       setActionLoading(true);
-      await api.patch(`/user/reservations/${extendRes.id}/extend`, { additionalHours: hours });
-      showToast(`Reserva extendida ${hours} hora${hours > 1 ? 's' : ''} correctamente.`);
-      setExtendRes(null);
-      fetchData();
-    } catch (err: any) {
-      showToast(err.response?.data?.error || 'No se puede extender. Puede haber otra reserva próxima.', 'error');
-    } finally {
-      setActionLoading(false);
-    }
-  };
+      const {data} = await api.post(`/reservations/${extendRes.id}/extend`, {
+        additionalHours: hours
+      });
 
-  // ── Solicitar factura ──────────────────────────────────────
-  const handleInvoice = async (form: InvoiceForm) => {
-    if (!invoiceRes) return;
-    try {
-      setActionLoading(true);
-      await api.post(`/user/reservations/${invoiceRes.id}/invoice`, form);
-      showToast('Solicitud enviada. Recibirás tu factura por email.');
-      setInvoiceRes(null);
-      fetchData();
+      if(data.clientSecret){
+        showToast("Intencion de extension creada. Procedimiento al pago...");
+        setExtensionClientSecret(data.clientSecret);
+        setExtendingAmount(data.totalAmount || 0);
+      }
+      setExtendRes(null);
     } catch (err: any) {
-      showToast(err.response?.data?.error || 'Error al solicitar factura', 'error');
+      const errorMessage = err.response?.data?.error || 'No se puede extender en este momento.';
+      showToast(errorMessage, 'error');
     } finally {
       setActionLoading(false);
     }
@@ -498,6 +414,55 @@ const UserDashboard: React.FC = () => {
             </div>
           </div>
         </div>
+
+                {/* ── SECCIÓN DE BENEFICIOS (GIFT CARDS) ── */}
+        {discounts.length > 0 && (
+          <div className="mb-6 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="flex items-center gap-2 mb-3">
+              <PlusCircleIcon className="h-5 w-5 text-white" />
+              <h2 className="text-xl font-bold text-white">Mis Beneficios</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {discounts.map((discount) => (
+                <div 
+                  key={discount.id} 
+                  className="group relative overflow-hidden bg-white bg-opacity-10 backdrop-blur-md rounded-xl p-5 border border-white border-opacity-20 shadow-xl transition-all hover:bg-opacity-15"
+                >
+                  {/* Adorno visual: Círculos de "ticket" a los lados */}
+                  <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-black rounded-full border-r border-white/20" />
+                  <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-black rounded-full border-l border-white/20" />
+                  
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-xs font-bold text-emerald-400 uppercase tracking-widest mb-1">Cortesía Meet</p>
+                      <h4 className="text-2xl font-black text-white">{discount.hours} Horas Gratis</h4>
+                      <p className="text-xs text-gray-400 mt-1 italic">{discount.description || 'Válido para cualquier sala'}</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="bg-white/10 px-2 py-1 rounded text-[10px] font-mono font-bold text-white border border-white/10">
+                        {discount.code}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 pt-3 border-t border-white/10 flex justify-between items-center">
+                    <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                      <CalendarIcon className="h-3 w-3" /> 
+                      Vence: {new Date(discount.expiresAt).toLocaleDateString()}
+                    </span>
+                    <Link 
+                      to="/booking" 
+                      className="text-[10px] font-bold text-white hover:underline uppercase tracking-tighter"
+                    >
+                      Usar ahora →
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ── Panel principal (idéntico al original) ── */}
         <div className="bg-black bg-opacity-40 backdrop-blur-sm rounded-lg shadow-lg mb-8 border border-white border-opacity-10">
@@ -616,14 +581,14 @@ const UserDashboard: React.FC = () => {
                           >
                             Ver Detalles
                           </button>
-                           {/*{reservation.canExtend && (
+                           {reservation.canExtend && (
                             <button
                               onClick={() => setExtendRes(reservation)}
                               className="inline-flex items-center gap-1 px-3 py-1 bg-white bg-opacity-15 hover:bg-opacity-30 text-white text-sm rounded-md backdrop-blur-sm border border-white border-opacity-20 transition-all"
                             >
                               <PlusCircleIcon className="h-3.5 w-3.5" /> Extender
                             </button>
-                          )}*/}
+                          )}
                           {reservation.canCancel && (
                             <button
                               onClick={() => setCancelRes(reservation)}
@@ -686,18 +651,15 @@ const UserDashboard: React.FC = () => {
                         <div className="mt-4 flex flex-wrap gap-2">
                           <button
                             onClick={() => setDetailRes(reservation)}
-                            className="px-3 py-1 bg-white bg-opacity-15 hover:bg-opacity-30 text-white text-sm rounded-md backdrop-blur-sm border border-white border-opacity-20 transition-all"
-                          >
-                            Ver Detalles
+                            className="
+                            px-3 
+                            py-1 
+                            bg-white 
+                            bg-opacity-15 
+                            hover:bg-opacity-30 
+                            text-white text-sm 
+                            rounded-md backdrop-blur-sm border border-white border-opacity-20 transition-all">Ver Detalles
                           </button>
-                          {(reservation.status === 'COMPLETED' || reservation.status === 'CONFIRMED' || reservation.status === 'PAID') && !reservation.invoiceRequested && (
-                            <button
-                              onClick={() => setInvoiceRes(reservation)}
-                              className="inline-flex items-center gap-1 px-3 py-1 bg-white bg-opacity-15 hover:bg-opacity-30 text-white text-sm rounded-md backdrop-blur-sm border border-white border-opacity-20 transition-all"
-                            >
-                              <FileTextIcon className="h-3.5 w-3.5" /> Solicitar Factura
-                            </button>
-                          )}
                           {reservation.invoiceRequested && (
                             <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-500/10 text-green-300 text-sm rounded-md border border-green-500/20">
                               <CheckCircleIcon className="h-3.5 w-3.5" /> Factura solicitada
@@ -716,10 +678,26 @@ const UserDashboard: React.FC = () => {
 
       {/* ── Modales ── */}
       {detailRes  && <DetailsModal reservation={detailRes}  onClose={() => setDetailRes(null)} />}
-      {cancelRes  && <CancelModal  reservation={cancelRes}  onConfirm={handleCancel}           onClose={() => setCancelRes(null)}  loading={actionLoading} />}
+      {cancelRes  && <CancelModal  reservation={cancelRes}
+      onConfirm={() => handleCancel(cancelRes.id)}
+      onClose={() => setCancelRes(null)}  loading={actionLoading} />}
       {extendRes  && <ExtendModal  reservation={extendRes}  onConfirm={handleExtend}           onClose={() => setExtendRes(null)}  loading={actionLoading} />}
-      {invoiceRes && <InvoiceModal reservation={invoiceRes} onConfirm={handleInvoice}          onClose={() => setInvoiceRes(null)} loading={actionLoading} />}
-
+      {extensionClientSecret && (
+        <ExtensionPaymentModal 
+          clientSecret={extensionClientSecret}
+          amount={extendingAmount}
+          onClose={() => {
+            setExtensionClientSecret(null);
+            setExtendingAmount(0);
+          }}
+          onSuccess={() => {
+            setExtensionClientSecret(null);
+            setExtendingAmount(0);
+            showToast("¡Pago de extensión exitoso!");
+            fetchData(); // Recargamos para ver la nueva hora de salida
+          }}
+        />
+      )}
       {/* ── Toast ── */}
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
     </div>

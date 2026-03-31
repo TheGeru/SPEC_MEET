@@ -72,6 +72,10 @@ export interface PricePackage {
 export interface Room {
   id: string;
   name: string;
+  location?: {
+    taxRate: number;
+    locationName: string;
+  };
   capacity: number;
   status: string;
   amenities: string[];
@@ -90,6 +94,7 @@ export interface BookingSelection {
 export interface BookingSummary {
   roomName: string;         // 🆕 Para mostrar el nombre de la sala en el resumen
   packageName?: string; 
+  packageId?: string;
   date: string;
   formattedDate: string;
   startTime: string;
@@ -97,6 +102,8 @@ export interface BookingSummary {
   duration: number;
   pricePerHour: number;
   subtotal: number;
+  discountCodeId?: string | null;
+  discountHours?: number;
   iva: number;
   total: number;
 }
@@ -126,9 +133,10 @@ export const createReservationSchema = z.object({
     error: "Debes aceptar los términos y condiciones",
   }),
   acceptedVersion: z.string().min(1),
+  discountCodeId: z.string().nullish(),
 });
 
-export type CreateReservationPayload = z.infer<typeof createReservationSchema>;
+  export type CreateReservationPayload = z.infer<typeof createReservationSchema>;
 
 // ─── CONSTANTS ────────────────────────────────────────────────
 
@@ -136,8 +144,8 @@ export const BOOKING_CONFIG = {
   PRICE_PER_HOUR_FALLBACK: 0,
   IVA_RATE: 0.16,
   CLEANING_BUFFER_MINUTES: 30,
-  OPERATION_START_HOUR: 9,
-  OPERATION_END_HOUR: 18,
+  OPERATION_START_HOUR: 8,
+  OPERATION_END_HOUR: 20,
   MAX_DURATION_HOURS: 4,
   TERMS_VERSION: "1.0",
 } as const;
