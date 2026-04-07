@@ -150,7 +150,7 @@ const handleAddHours = async () => {
 
   return <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="font-makron text-3xl font-bold text-background">Gestión de Usuarios</h1>
+        <h1 className="text-3xl font-bold text-white">Gestión de Usuarios</h1>
         {/* 🚀 BOTÓN NUEVO */}
         <button 
           onClick={() => setShowAddAdminModal(true)}

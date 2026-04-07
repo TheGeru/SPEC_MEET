@@ -19,8 +19,8 @@ export default function AdminDashboard() {
 
   if (isLoading && !data) {
     return (
-      <div className="flex justify-center items-center h-screen bg-white">
-        <Loader2 className="h-10 w-10 text-primary animate-spin" />
+      <div className="flex justify-center items-center h-screen bg-black">
+        <Loader2 className="h-10 w-10 text-white animate-spin" />
       </div>
     );
   }
@@ -49,7 +49,7 @@ export default function AdminDashboard() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-makron font-bold text-background">Panel Administrativo</h1>
+          <h1 className="text-3xl font-bold text-white">Panel Administrativo</h1>
           <p className="text-gray-400 mt-2">Gestiona tu sala de juntas inteligente</p>
           {lastUpdated && (
             <p className="text-xs text-gray-600 mt-1">Actualizado: {lastUpdated.toLocaleTimeString("es-MX")}</p>

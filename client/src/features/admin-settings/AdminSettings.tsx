@@ -69,7 +69,7 @@ export default function AdminSettings() {
   if (settings.isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh]">
-        <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
+        <Loader2 className="h-12 w-12 text-white animate-spin mb-4" />
         <p className="text-gray-400 font-medium">Cargando configuraciones...</p>
       </div>
     );
@@ -184,7 +184,7 @@ export default function AdminSettings() {
       {/* HEADER GLOBAL REDISEÑADO */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 border-b border-zinc-800 pb-6">
         <div>
-          <h1 className="font-makron text-3xl font-bold text-background tracking-tight">
+          <h1 className="text-3xl font-bold text-white tracking-tight">
             Configuración del Sistema
           </h1>
           <p className="text-zinc-400 text-sm mt-1">

@@ -40,7 +40,7 @@ import RoomSelector from "./components/RoomSelector";
 // Stripe public key — in production, use env variable
 const stripekey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 if(!stripekey){
-  throw new Error("Falta VITE_STRIPE_PUBLIC_KEY en las variables de entorno.");
+  // throw new Error("Falta VITE_STRIPE_PUBLIC_KEY en las variables de entorno.");
 }
 
 const stripePromise = loadStripe(stripekey);
@@ -81,7 +81,6 @@ export default function Booking() {
   }, [flow.clientSecret]);
 
   // Paso 1 seleccionar sala_________________________-
-  // paso 1_seleccion de sla
   const renderRoomStep = () => (
     <RoomSelector
     rooms={availability.rooms}
@@ -89,126 +88,6 @@ export default function Booking() {
     onSelectRoom={flow.goToDate}
     />
   );
-
-// ── Step: Date Selection ──────────────────────────────────
-  const renderDateStep = () => {
-    // 1. Declaramos la lógica antes del return
-    const isFullDay = flow.isPlanFlow && flow.selectedDuration >= 10;
-
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-white mb-4">
-            Selecciona fecha y hora
-          </h3>
-          <button
-            onClick={flow.goBackToRoom}
-            className="text-white text-sm opacity-60 hover:opacity-100 underline">
-            ← Cambiar sala
-          </button>
-        </div>
-
-        <BookingCalendar
-          selectedDate={flow.selectedDate}
-          myBookedDates={availability.myBookedDates}
-          onSelectDate={(date) => {
-            flow.setSelectedDate(date);
-            // 🚀 IMPORTANTE: Si es día completo, forzamos las 8:00 AM al hacer clic en el día
-            if (isFullDay) {
-              flow.setSelectedTimeSlot("08:00");
-            }
-          }}
-          hasDayReservations={availability.hasDayReservations}
-          isPlanFlow={isPlanFlow}
-          selectedDuration={selectedDuration}
-          isDayValidForPlan={availability.isDayValidForPlan}
-        />
-
-        {/* 2. Si es plan de día completo, mostramos aviso en vez de dejarlo elegir hora */}
-        {isFullDay && flow.selectedDate ? (
-          <div className="bg-purple-500/20 border border-purple-500/40 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
-            <InfoIcon className="h-5 w-5 text-purple-400 shrink-0" />
-            <p className="text-sm text-purple-100">
-              Este plan reserva la sala de <strong>08:00 AM a 08:00 PM</strong> (12h) automáticamente.
-            </p>
-          </div>
-        ) : (
-          <TimeSlotPicker
-            date={flow.selectedDate}
-            timeSlots={availability.getAvailableTimeSlots(flow.selectedDate).filter(slot => 
-              availability.isSlotAvailable(flow.selectedDate, slot, flow.selectedDuration)
-            )}
-            selectedSlot={flow.selectedTimeSlot}
-            duration={flow.selectedDuration}
-            isSlotAvailable={availability.isSlotAvailable}
-            onSelectSlot={flow.setSelectedTimeSlot}
-            formatDate={formatDate}
-          />
-        )}
-
-        <DurationSelector
-          selectedDuration={flow.selectedDuration}
-          onSelectDuration={flow.setSelectedDuration}
-          // 🚀 SOLO visible si NO es flujo de plan
-          visible={!!flow.selectedTimeSlot && !flow.isPlanFlow}
-        />
-
-        {/* ── SECCIÓN DE BENEFICIOS Y CUPONES ── */}
-        {!!flow.selectedTimeSlot && !isPlanFlow && (
-          <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/20 shadow-xl transition-all duration-300">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="p-1.5 bg-purple-500/20 rounded-lg">
-                <TagIcon className="h-4 w-4 text-purple-400" />
-              </div>
-              <span className="text-xs font-black text-white uppercase tracking-[0.2em]">
-                Beneficios Disponibles
-              </span>
-            </div>
-
-            {flow.myDiscounts.length > 0 ? (
-              <div className="relative group">
-                <select
-                  value={flow.selectedDiscountId || ""}
-                  onChange={(e) => flow.setSelectedDiscountId(e.target.value || null)}
-                  className="w-full bg-zinc-900/50 text-white rounded-xl py-3 px-4 border border-white/10 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all appearance-none cursor-pointer text-sm"
-                >
-                  <option value="" className="bg-zinc-900">No aplicar ningún beneficio</option>
-                  {flow.myDiscounts.map((discount) => (
-                    <option key={discount.id} value={discount.id} className="bg-zinc-900">
-                      🎁 {discount.hours}h de cortesía — {discount.code}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none opacity-50">
-                  <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
-            ) : (
-              <div className="py-2 flex items-start gap-3 opacity-60">
-                <InfoIcon className="h-5 w-5 text-gray-400 shrink-0" />
-                <p className="text-sm text-gray-400 leading-relaxed">
-                  No tienes códigos de descuento activos.
-                </p>
-              </div>
-            )}
-
-            {flow.selectedDiscountId && (
-              <div className="mt-4 flex items-center gap-2 animate-in fade-in zoom-in duration-300">
-                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <p className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">
-                  Beneficio aplicado correctamente
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {flow.summary && <BookingSummary summary={flow.summary} />}
-      </div>
-    );
-  };
 
   // ── Step: Payment ─────────────────────────────────────────
   const renderPaymentStep = () => (
@@ -283,14 +162,6 @@ export default function Booking() {
   // ── Render ────────────────────────────────────────────────
   return (
     <div className="w-full min-h-screen relative py-10 px-4">
-      {/* Background */}
-      <div
-        className="fixed inset-0 bg-cover bg-center z-0"
-        style={{
-          backgroundImage:
-            "url('https://uploadthingy.s3.us-west-1.amazonaws.com/mnx4A3B36Dy2nyF5i8QPC8/PHOTO-2025-02-03-12-44-43.jpg')",
-        }}
-      />
 
       <div className="relative z-10 max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold text-white mb-8">Reservar Sala</h1>

@@ -12,8 +12,10 @@ export default {
         'background': '#2D2A26',
       },
       fontFamily: {
+        sans: ['Montserrat', 'sans-serif'],
         'makron': ['Makron', 'sans-serif'],
-        'morgaty': ['Morgaty', 'serif']
+        'morgaty': ['Morgaty', 'serif'],
+        
       },
     },
   },

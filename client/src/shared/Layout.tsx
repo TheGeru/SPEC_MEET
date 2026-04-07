@@ -11,8 +11,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   
   // Páginas con imagen de fondo
-  const pagesWithImageBackground = ['/', '/booking', '/dashboard','/login','/register'];
+  const pagesWithImageBackground = ['/', '/booking', '/dashboard','/login','/register','/plans'];
   const hasImageBackground = pagesWithImageBackground.includes(location.pathname);
+
+  //Paginas sin Footer
+  const pagesWithoutFooter = ['/booking'];
+  const hasFooter = !pagesWithoutFooter.includes(location.pathname);
 
   return (
     <div className="flex flex-col min-h-screen text-white relative">
@@ -32,16 +36,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="fixed inset-0 bg-black/40 z-0" />
       )}*/}
       
-      {/* Fondo blanco para páginas admin */}
+      {/* Fondo Negro para páginas admin */}
       {!hasImageBackground && (
-        <div className="fixed inset-0 bg-white z-0" />
+        <div className="fixed inset-0 bg-black z-0" />
       )}
       
       {/* Contenido (relativo al fondo) */}
       <div className="relative z-10 flex flex-col min-h-screen">
         <Navbar />
         <main className="flex-grow">{children}</main>
-        <Footer />
+        {hasFooter && <Footer />}
       </div>
     </div>
   );
