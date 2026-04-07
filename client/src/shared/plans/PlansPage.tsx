@@ -4,11 +4,22 @@ import { Loader2 } from 'lucide-react';
 import { fetchPublicPlans } from './public-plans.service';
 import type { PublicPackageData } from './models';
 import { BILLING_UNIT } from './models';
+import { useNavigate } from 'react-router-dom';
 
 const PlansPage: React.FC = () => {
   const [plans, setPlans] = useState<PublicPackageData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  const navigate = useNavigate();
+
+  const handleSelectPlan = (plan: PublicPackageData) => {
+  navigate('/booking', { 
+    state: { 
+      selectedPlan: plan,
+    } 
+  });
+};
 
   useEffect(() => {
     const loadPlans = async () => {
@@ -144,12 +155,12 @@ const PlansPage: React.FC = () => {
                 </div>
 
                 {/* Botón */}
-                <Link 
-                  to={`/booking?planId=${plan.id}&roomId=${plan.roomId}`} 
-                  className={`block w-full py-3.5 px-4 rounded-lg text-center font-bold text-sm transition-colors mt-auto ${btnStyle}`}
+                <button
+                onClick={() => handleSelectPlan(plan)}
+                className={`block w-full py-3.5 px-4 rounded-lg text-center font-bold text-sm transition-colors mt-auto ${btnStyle}`}
                 >
                   {isHourly ? "Reservar" : `Reservar ${plan.name.replace("Plan ", "")}`}
-                </Link>
+                </button>
               </div>
             );
           })}

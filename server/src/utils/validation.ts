@@ -37,13 +37,14 @@ export const roomSchema = z.object({
 
 export const reservationSchema = z.object({
   roomId: z.string().uuid({ message: "ID de sala inválido" }),
-  // z.coerce.date() safely converts string dates from the client into JS Date objects
+  packageId: z.string().uuid().optional(),
   startTime: z.coerce.date({ message: "Fecha de inicio inválida" }),
   endTime: z.coerce.date({ message: "Fecha de fin inválida" }),
   termsAccepted: z.boolean().refine(val => val === true, {
     message: "Debes aceptar los términos y condiciones"
   }),
   acceptedVersion: z.string().min(1, "La versión de los términos es requerida"),
+
 }).superRefine((data, ctx) => {
   const now = new Date();
   if (data.startTime < now) {
@@ -57,6 +58,18 @@ export const reservationSchema = z.object({
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "La hora de fin debe ser después de la hora de inicio",
+      path: ["endTime"]
+    });
+  }
+
+  const MAX_ADVANCE_DAYS = 90;
+  const maxAllowedDate = new Date();
+  maxAllowedDate.setDate(maxAllowedDate.getDate() +  MAX_ADVANCE_DAYS);
+
+  if (data.startTime > maxAllowedDate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `No puedes reservar con más de ${MAX_ADVANCE_DAYS} días de anticipación`,
       path: ["endTime"]
     });
   }
@@ -83,7 +96,7 @@ export const businessConfigSchema = z.object({
 export const termsConfigSchema = z.object({
   version: z.string().min(1, "La versión es requerida"),
   isActive: z.boolean().default(false),
-  baseTemplate: z.string().min(10, "La plantilla no puede estar vacía"), // Fixed to match Prisma
+  templateContent: z.string().min(10, "La plantilla no puede estar vacía"), // 🔧 Corregido
   additionalClauses: z.string().nullable().optional(),
   privacyOptions: z.object({
     collectEmail: z.boolean(),
@@ -135,7 +148,6 @@ export const pricePackagePayloadSchema = z.object({
   minDuration: z.number().int().optional(),
   maxDuration: z.number().int().optional(),
   isActive: z.boolean().default(true),
-  
   metadata: packageMetadataSchema,
 });
 

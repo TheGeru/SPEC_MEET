@@ -4,6 +4,7 @@ import jwt  from 'jsonwebtoken';
 interface TokenPayload {
     userId: string;
     role: string;
+    email: string;
 }
 
 declare global {
@@ -16,8 +17,6 @@ declare global {
 
 
 export const authenticateToken = (req: Request, res: Response, next: NextFunction) =>{
-    console.log("LLEGUE AL MIDDLEWARE NUEVO - VERSION FINAL 🔥");
-    console.log("Cookies recibidas:", req.cookies);
     const token = req.cookies['auth_token'];
 
     if(!token){
@@ -27,7 +26,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     try {
         const verified = jwt.verify(token, process.env.JWT_SECRET!);
         req.user = verified as TokenPayload;
-+       next();
+        next();
     } catch(error){
         res.status(403).json({error: 'Token invalido o expirado'});
         return;
@@ -36,9 +35,8 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
 
 export const authorizeAdmin = (req: Request, res: Response, next: NextFunction) => {
     // Asumimos que authenticateToken ya se ejecutó antes y puso req.user
-    const user = (req as any).user;
 
-    if (!user || user.role !== 'ADMIN') {
+    if (!req.user || req.user.role !== 'ADMIN') {
          res.status(403).json({ error: "Acceso denegado. Se requieren permisos de Administrador." });
          return; 
     }

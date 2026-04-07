@@ -62,8 +62,8 @@ const toFormData = (p: PricePackageData): PkgFormData => ({
   name: p.name,
   description: p.description || "",
   billingUnit: p.billingUnit,
-  minDuration: p.minDuration?.toString() || "",
-  maxDuration: p.maxDuration?.toString() || "",
+  minDuration: p.minDuration ? (p.minDuration / 60).toString() : "",
+  maxDuration: p.maxDuration ? (p.maxDuration / 60).toString() : "",
   discountPct: (p.metadata.discountPct ?? 0).toString(),
   blockHours: (p.metadata.blockHours ?? "").toString(),
   roomId: p.roomId || "",
@@ -121,8 +121,8 @@ export default function PackagesTab({
       name: form.name,
       description: form.description || null,
       billingUnit: form.billingUnit,
-      minDuration: form.minDuration ? parseInt(form.minDuration) : null,
-      maxDuration: form.maxDuration ? parseInt(form.maxDuration) : null,
+      minDuration: form.minDuration ? Math.round(parseFloat(form.minDuration) * 60) : null,
+      maxDuration: form.maxDuration ? Math.round(parseFloat(form.maxDuration) * 60) : null,
       metadata: buildMetadata(),
       roomId: form.roomId ? form.roomId : (rooms.length > 0 ? rooms[0].id : ""),
       isActive: form.isActive,
@@ -298,8 +298,14 @@ export default function PackagesTab({
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><label className={labelClass}>Duración mín (min)</label><input type="number" className={inputClass} value={form.minDuration} onChange={(e) => setField("minDuration", e.target.value)} /></div>
-                <div><label className={labelClass}>Duración máx (min)</label><input type="number" className={inputClass} value={form.maxDuration} onChange={(e) => setField("maxDuration", e.target.value)} /></div>
+                <div>
+                  <label className={labelClass}>Duración mín (horas)</label>
+                  <input type="number" step="0.5" className={inputClass} value={form.minDuration} onChange={(e) => setField("minDuration", e.target.value)} />
+                </div>
+                <div>
+                  <label className={labelClass}>Duración máx (horas)</label>
+                  <input type="number" step="0.5" className={inputClass} value={form.maxDuration} onChange={(e) => setField("maxDuration", e.target.value)} />
+                </div>
               </div>
 
               {/* Conditional: Discount */}

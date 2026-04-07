@@ -22,7 +22,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
-import { CreditCardIcon } from "lucide-react";
+import { CreditCardIcon, InfoIcon, TagIcon } from "lucide-react";
 
 // Feature-local imports
 import { BOOKING_STEP, PAYMENT_METHOD } from "./models";
@@ -35,6 +35,7 @@ import DurationSelector from "./components/DurationSelector";
 import BookingSummary from "./components/BookingSummary";
 import CheckoutForm from "./components/CheckoutForm";
 import BookingConfirmation from "./components/BookingConfirmation";
+import RoomSelector from "./components/RoomSelector";
 
 // Stripe public key — in production, use env variable
 const stripekey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
@@ -42,6 +43,7 @@ if(!stripekey){
   // throw new Error("Falta VITE_STRIPE_PUBLIC_KEY en las variables de entorno.");
 }
 
+const stripePromise = loadStripe(stripekey);
 // ── Helper: format date for display ───────────────────────────
 const formatDate = (dateString: string): string => {
   if (!dateString) return "";
@@ -54,22 +56,16 @@ const formatDate = (dateString: string): string => {
   });
 };
 
-// ── Container ─────────────────────────────────────────────────
+// ── Container ─────────────────────────────────────────────────ey
 
 export default function Booking() {
   const navigate = useNavigate();
 
   // Hooks — business logic lives HERE, not in JSX
   const flow = useBookingFlow();
-  const availability = useAvailability();
-
-  // Sync roomId from availability → flow
-  useEffect(() => {
-    if (availability.roomId) {
-      flow.setRoomId(availability.roomId);
-    }
-  }, [availability.roomId]);
-
+  const availability = useAvailability({roomId: flow.roomId});
+  const { isPlanFlow, selectedDuration } = flow;
+  const { isDayValidForPlan } = availability;
   // Refresh availability when date changes
   useEffect(() => {
     if (flow.selectedDate) {
@@ -174,6 +170,7 @@ export default function Booking() {
 
         <div className="bg-black bg-opacity-40 backdrop-blur-sm rounded-lg shadow-lg p-6">
           {/* Step content */}
+          {flow.currentStep === BOOKING_STEP.ROOM && renderRoomStep()}
           {flow.currentStep === BOOKING_STEP.DATE && renderDateStep()}
           {flow.currentStep === BOOKING_STEP.PAYMENT && renderPaymentStep()}
           {flow.currentStep === BOOKING_STEP.CONFIRMATION && flow.summary && (

@@ -14,6 +14,7 @@ interface ProgressStep {
 }
 
 const STEPS: ProgressStep[] = [
+  { key: BOOKING_STEP.ROOM,         label: "Sala" },
   { key: BOOKING_STEP.DATE, label: "Fecha" },
   { key: BOOKING_STEP.PAYMENT, label: "Pago" },
   { key: BOOKING_STEP.CONFIRMATION, label: "Fin" },
