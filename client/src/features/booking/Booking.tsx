@@ -37,10 +37,10 @@ import CheckoutForm from "./components/CheckoutForm";
 import BookingConfirmation from "./components/BookingConfirmation";
 
 // Stripe public key — in production, use env variable
-const stripePromise = loadStripe(
-  import.meta.env.VITE_STRIPE_PUBLIC_KEY ||
-    "pk_test_51SuGE6R7CcXcMDYUm8apqxqrXheiJOYSBHT6Do6JOhOYmElKCzlcbJgoiW3YUAt4qKzYdANmnXoVde4Q6LCfxyQU00e1smFJUy"
-);
+const stripekey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+if(!stripekey){
+  // throw new Error("Falta VITE_STRIPE_PUBLIC_KEY en las variables de entorno.");
+}
 
 // ── Helper: format date for display ───────────────────────────
 const formatDate = (dateString: string): string => {
@@ -84,38 +84,13 @@ export default function Booking() {
     }
   }, [flow.clientSecret]);
 
-  // ── Step: Date Selection ──────────────────────────────────
-  const renderDateStep = () => (
-    <div className="space-y-6">
-      <h3 className="text-lg font-medium text-white mb-4">
-        Selecciona fecha y hora
-      </h3>
-
-      <BookingCalendar
-        selectedDate={flow.selectedDate}
-        myBookedDates={availability.myBookedDates}
-        onSelectDate={flow.setSelectedDate}
-        hasDayReservations={availability.hasDayReservations}
-      />
-
-      <TimeSlotPicker
-        date={flow.selectedDate}
-        timeSlots={availability.getAvailableTimeSlots(flow.selectedDate)}
-        selectedSlot={flow.selectedTimeSlot}
-        duration={flow.selectedDuration}
-        isSlotAvailable={availability.isSlotAvailable}
-        onSelectSlot={flow.setSelectedTimeSlot}
-        formatDate={formatDate}
-      />
-
-      <DurationSelector
-        selectedDuration={flow.selectedDuration}
-        onSelectDuration={flow.setSelectedDuration}
-        visible={!!flow.selectedTimeSlot}
-      />
-
-      {flow.summary && <BookingSummary summary={flow.summary} />}
-    </div>
+  // Paso 1 seleccionar sala_________________________-
+  const renderRoomStep = () => (
+    <RoomSelector
+    rooms={availability.rooms}
+    isLoading={availability.isLoadingRoom}
+    onSelectRoom={flow.goToDate}
+    />
   );
 
   // ── Step: Payment ─────────────────────────────────────────
@@ -191,14 +166,6 @@ export default function Booking() {
   // ── Render ────────────────────────────────────────────────
   return (
     <div className="w-full min-h-screen relative py-10 px-4">
-      {/* Background */}
-      <div
-        className="fixed inset-0 bg-cover bg-center z-0"
-        style={{
-          backgroundImage:
-            "url('https://uploadthingy.s3.us-west-1.amazonaws.com/mnx4A3B36Dy2nyF5i8QPC8/PHOTO-2025-02-03-12-44-43.jpg')",
-        }}
-      />
 
       <div className="relative z-10 max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold text-white mb-8">Reservar Sala</h1>

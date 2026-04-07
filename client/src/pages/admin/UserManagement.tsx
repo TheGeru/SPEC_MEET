@@ -93,7 +93,15 @@ const UserManagement: React.FC = () => {
 
   return <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="font-makron text-3xl font-bold text-background">Gestión de Usuarios</h1>
+        <h1 className="text-3xl font-bold text-white">Gestión de Usuarios</h1>
+        {/* 🚀 BOTÓN NUEVO */}
+        <button 
+          onClick={() => setShowAddAdminModal(true)}
+          className="bg-zinc-700 hover:bg-zinc-600 text-white px-4 py-2 rounded-md flex items-center transition-colors text-sm font-medium border border-zinc-600"
+        >
+          <PlusIcon className="h-4 w-4 mr-2" />
+          Nuevo Administrador
+        </button>
       </div>
       
       <div className="bg-zinc-900 rounded-lg shadow-lg p-6 mb-8">

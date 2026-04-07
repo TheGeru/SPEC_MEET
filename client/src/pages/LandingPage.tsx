@@ -21,7 +21,7 @@ const LandingPage: React.FC = () => {
         <div className="absolute inset-0 flex items-center justify-center z-10">
           <button
             onClick={handleReservaClick}
-            className="font-makron text-white py-4 px-10 text-2xl transition-all hover:bg-white hover:bg-opacity-30 border border-white font-normal rounded-full bg-white bg-opacity-15 backdrop-blur-sm hover:scale-105 transform"
+            className=" text-white py-4 px-10 text-2xl transition-all hover:bg-white hover:bg-opacity-30 border border-white font-normal rounded-full bg-white bg-opacity-15 backdrop-blur-sm hover:scale-105 transform"
           >
             RESERVAR
           </button>

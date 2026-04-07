@@ -47,7 +47,7 @@ const Footer: React.FC = () => {
           </div>
         </div>
         <div className="mt-8 border-t border-zinc-800 pt-6">
-          <p className="font-makron font-thin text-secondary text-sm text-center">
+          <p className=" font-thin text-secondary text-sm text-center">
             &copy; {new Date().getFullYear()} .MEET Todos los derechos
             reservados.
           </p>

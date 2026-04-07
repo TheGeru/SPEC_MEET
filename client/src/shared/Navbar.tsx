@@ -31,7 +31,7 @@ const Navbar: React.FC = () => {
   };
 
   // Determinar si estamos en páginas con imagen de fondo
-  const pagesWithImageBackground = ['/', '/booking', '/dashboard','/login','/register',];
+  const pagesWithImageBackground = ['/', '/booking', '/dashboard','/login','/register','/plans'];
   const hasImageBackground = pagesWithImageBackground.includes(location.pathname);
 
   

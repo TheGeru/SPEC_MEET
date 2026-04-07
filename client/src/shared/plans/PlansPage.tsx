@@ -27,19 +27,19 @@ const PlansPage: React.FC = () => {
     loadPlans();
   }, []);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-zinc-300"><Loader2 className="animate-spin h-8 w-8 text-[#9A7B4F]" /></div>;
-  if (error) return <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-zinc-300 text-red-500">{error}</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-black"><Loader2 className="animate-spin h-8 w-8 text-white" /></div>;
+  if (error) return <div className="min-h-screen flex items-center justify-center bg-black text-red-500">{error}</div>;
 
   return (
-    <div className="w-full min-h-screen bg-white font-sans">
+    <div className="w-full min-h-screen font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         
         {/* TU HEADER ORIGINAL */}
         <div className="text-center mb-12">
-          <h1 className=" text-4xl font-bold text-background mb-4">
+          <h1 className=" text-4xl font-bold text-white mb-4">
             Nuestros Planes
           </h1>
-          <p className="font-custom text-xl text-gray-700 max-w-3xl mx-auto">
+          <p className="font-custom text-xl text-gray-300 max-w-3xl mx-auto">
             Selecciona el plan que mejor se adapte a tus necesidades de reuniones y presentaciones
           </p>
         </div>
