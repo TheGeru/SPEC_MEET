@@ -159,3 +159,11 @@ export const roomBaseRateSchema = z.object({
   hourlyRate: z.number().positive("La tarifa debe ser mayor a 0"),
   currency: z.string().length(3).default("MXN"),
 });
+
+export const extensionSchema = z.object({
+    additionalHours: z.number({
+        message: "El número de horas es requerido y debe ser numerico",
+    })
+    .int("Las horas deben ser un número entero")
+    .positive("Debes extender al menos 1 hora") // Asegura que sea mayor a 0 y no negativo
+});

@@ -5,7 +5,7 @@ import { prisma } from "../config/prisma";
 import { loginSchema, registerSchema } from "../utils/validation";
 import crypto from 'crypto';
 import { sendEmail } from "../services/email.service";
-import { error } from "console";
+
 
 export const register = async (req: Request, res: Response) : Promise<void> =>{
     try {
@@ -90,8 +90,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
         res.cookie('auth_token', token, {
             httpOnly: true,
-            secure: false,
-            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
             maxAge: maxAge
         });
         

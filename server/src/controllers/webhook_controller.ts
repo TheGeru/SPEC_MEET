@@ -80,6 +80,29 @@ export const handleStripeWebhook = async (req: Request, res: Response): Promise<
                     }
                 });
 
+                if(reservation.discountCodeId) {
+                    const activeDiscount = await tx.discountCode.findUnique({
+                        where: {id: reservation.discountCodeId}
+                    });
+
+                    if(activeDiscount){
+                        const durationMinutes = (reservation.end_time.getTime() - reservation.start_time.getTime()) / (1000 * 60);
+                        const durationHours = durationMinutes / 60;
+                        
+                        const hoursConsumed = Math.min(durationHours, activeDiscount.hours);
+                        const remainingHours = activeDiscount.hours - hoursConsumed;
+
+                        await tx.discountCode.update({
+                            where: {id: activeDiscount.id},
+                            data: {
+                                hours: remainingHours,
+                                isUsed: remainingHours <= 0
+                            }
+                        });
+                        console.log(`🎟️ Cupón ${activeDiscount.code} actualizado. Horas restantes: ${remainingHours}`);
+                    }
+                 }
+
                 if(updatedReservation.isExtension && updatedReservation.parentReservationId){
                     await tx.reservation.update({
                         where: {id: updatedReservation.parentReservationId},

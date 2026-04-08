@@ -56,7 +56,7 @@ model Reservation {
   end_time       DateTime
   access_code    String?
   total_paid     Decimal @db.Decimal(10, 2)
-  status         String       @default("PENDING")
+  status         ReservationStatus       @default(PENDING)
   createdAt      DateTime     @default(now())
   terms_accepted Boolean      @default(false)
   packageId      String?       @map("package_id")
@@ -178,4 +178,11 @@ enum BillingUnit {
   full_day
   flat
   custom
+}
+
+enum ReservationStatus {
+  PENDING
+  PAID
+  CONFIRMED
+  CANCELLED
 }

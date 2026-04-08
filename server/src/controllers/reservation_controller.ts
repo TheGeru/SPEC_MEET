@@ -1,10 +1,12 @@
 import { Request, Response } from 'express';
-import { prisma } from '../config/prisma';
-import { reservationSchema } from '../utils/validation';
+import { prisma} from '../config/prisma';
+import { ReservationStatus } from '@prisma/client';
+import { reservationSchema, extensionSchema} from '../utils/validation';
 import { createPaymentIntent } from '../services/stripe.service';
 import { checkAvailability } from '../services/time_validation.service';
 import { notifyAdminsNewReservation, sendConfirmationEmail } from '../services/email.service';
 import { generatePasscode } from '../services/ttlock.service';
+import { error } from 'console';
 // ==========================================
 // 1. CREAR RESERVA
 // ==========================================
@@ -154,7 +156,7 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
             }
 
             // Alerta de seguridad: Si el cálculo da 0 o menos, frenamos la reserva
-            if (subtotal <= 0) {
+            if (subtotal <=  0) {
                 res.status(400).json({ error: "El plan seleccionado no tiene un precio válido o calculó $0." });
                 return;
             }
@@ -166,14 +168,21 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
         const totalAmount = subtotal * (1 + currentTaxtRate);
         const isTotallyFree = totalAmount === 0;
         
-        const newReservation = await prisma.reservation.create({
+        const result = await prisma.$transaction(async (tx)=> {
+
+            const isAvailable = await checkAvailability(roomId, startTime, endTime, undefined, tx);
+            if(!isAvailable){
+                throw new Error("CONFLICT")
+            }
+
+            const reservation = await tx.reservation.create({
             data: {
                 userId,
                 roomId,
                 start_time: startTime,
                 end_time: endTime,
                 total_paid: totalAmount,
-                status: isTotallyFree ? "PAID" : "PENDING",
+                status: isTotallyFree ? ReservationStatus.PAID : ReservationStatus.PENDING,
                 terms_accepted: termsAccepted,
                 termsVersion: acceptedVersion,
                 isExtension,
@@ -182,7 +191,7 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
         });
 
         // --- ACTUALIZAR EL CUPÓN ---
-        if (activeDiscount) {
+        if (activeDiscount && isTotallyFree) {
             // Calculamos cuántas horas se consumieron realmente
             const hoursConsumed = Math.min(durationHours, activeDiscount.hours);
             const remainingHours = activeDiscount.hours - hoursConsumed;
@@ -195,9 +204,12 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
                 }
             });
         }
+        return reservation;
+    });
 
+    const newReservation = result;
         // --- INTENCIÓN DE PAGO O CONFIRMACIÓN DIRECTA ---
-        if (isTotallyFree) {
+    if (isTotallyFree) {
             try {
                 let accessCode = null;
                 if(room.ttlock_lock_id){
@@ -251,9 +263,15 @@ export const createReservation = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-    } catch (error) {
+    } catch (error: any) {
+        if(error.message === "CONFLICT"){
+            res.status(409).json({
+                error: "El horario seleccionado acaba de ser reservado por alguien mas."
+            });
+            return;
+        }
         console.error("Error creating reservation:", error);
-        res.status(500).json({ error: "Error interno al crear reserva" });
+        res.status(500).json({error: "Error interno al crear reserva"})
     }
 };
 
@@ -269,15 +287,15 @@ export const getReservationsByRange = async (req: Request, res: Response): Promi
             return;
         }
 
-        const start = new Date(`${startDate}T00:00:00-06:00`);
-        const end = new Date(`${endDate}T23:59:59-06:00`);
+        const start = new Date(startDate as string);
+        const end = new Date(endDate as string);
 
 
         const [reservations, blocks] = await Promise.all([
            prisma.reservation.findMany({
             where:{
                 roomId: String(roomId),
-                status: {not: "CANCELLED"},
+                status: {not:  ReservationStatus.CANCELLED},
                 start_time: {gte: start, lte: end}
             },
             include: {user: {select: {name: true, email: true}}}
@@ -302,28 +320,28 @@ export const getReservationsByRange = async (req: Request, res: Response): Promi
 // ==========================================
 export const getReservationsByDate = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { roomId, date } = req.query;
+        const { roomId, startOfDay, endOfDay} = req.query;
 
-        if (!roomId || !date) {
-            res.status(400).json({ error: 'Faltan parámetros roomId o date' });
+        if (!roomId || !startOfDay || !endOfDay) {
+            res.status(400).json({ error: 'Faltan parámetros roomId, StartDay o endDay' });
             return;
         }
-        const startOfDay = new Date(`${date}T00:00:00-06:00`);
-        const endOfDay = new Date(`${date}T23:59:59-06:00`);
+        const start = new Date(startOfDay as string);
+        const end = new Date(endOfDay as string);
 
         const [reservations, blocks] = await Promise.all([
             prisma.reservation.findMany({
                 where: {
                     roomId: String(roomId),
-                    status: { not: "CANCELLED" },
-                    start_time: { gte: startOfDay, lte: endOfDay }
+                    status: { not: ReservationStatus.CANCELLED},
+                    start_time: { gte: start, lte: end }
                 },
                 select: { start_time: true, end_time: true, userId: true }
             }),
             prisma.blockedSlot.findMany({
                 where: {
                     roomId: String(roomId),
-                    start_time: { gte: startOfDay, lte: endOfDay }
+                    start_time: { gte: start, lte: end }
                 },
                 select: { start_time: true, end_time: true, reason: true }
             })
@@ -363,7 +381,7 @@ export const getMyReservations = async (req: Request, res: Response): Promise<vo
         const myReservations = await prisma.reservation.findMany({
             where: {
                 userId: userId,
-                status: { not: "CANCELLED" },
+                status: { not: ReservationStatus.CANCELLED },
                 start_time: {
                     gte: new Date() // Solo reservas futuras o de hoy
                 }
@@ -383,9 +401,18 @@ export const getMyReservations = async (req: Request, res: Response): Promise<vo
 
 export const extendReservation = async (req: Request, res: Response) => {
     try {
+        const validation = extensionSchema.safeParse(req.body);
+
+        if(!validation.success){
+            return res.status(400).json({
+                error: 'Datos invalidos para la extension',
+                details: validation.error.format()
+            });
+        }
+
         const userId = req.user?.userId;
         const {reservationId} = req.params;
-        const {additionalHours} = req.body;
+        const {additionalHours} = validation.data;
 
         const original = await prisma.reservation.findUnique({
             where: {id: reservationId},
@@ -432,7 +459,7 @@ export const extendReservation = async (req: Request, res: Response) => {
                 start_time: newStart,
                 end_time: newEnd,
                 total_paid: totalExtra,
-                status: "PENDING",
+                status: ReservationStatus.PENDING,
                 isExtension: true,
                 parentReservationId: original.id,
                 terms_accepted: true,
