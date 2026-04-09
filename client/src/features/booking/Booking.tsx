@@ -22,7 +22,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
-import { CreditCardIcon, InfoIcon, TagIcon } from "lucide-react";
+import { CreditCardIcon, InfoIcon, TagIcon} from "lucide-react";
 
 // Feature-local imports
 import { BOOKING_STEP, PAYMENT_METHOD } from "./models";
@@ -87,6 +87,83 @@ export default function Booking() {
     isLoading={availability.isLoadingRoom}
     onSelectRoom={flow.goToDate}
     />
+  );
+
+// ── Step: Date & Time ───────────────────────────────────────
+  const renderDateStep = () => (
+    <div className="flex flex-col gap-8"> {/* 🚀 FIX: Eliminado el lg:flex-row para que ocupe el 100% del ancho */}
+      
+      {/* Sección 1: Calendario (Arriba) */}
+      <div className="w-full">
+        <h3 className="text-lg font-medium text-white mb-4">Selecciona Fecha</h3>
+        <BookingCalendar
+          selectedDate={flow.selectedDate}
+          onSelectDate={flow.setSelectedDate}
+          myBookedDates={availability.myBookedDates}
+          hasDayReservations={availability.hasDayReservations}
+          isPlanFlow={isPlanFlow}
+          selectedDuration={selectedDuration}
+          isDayValidForPlan={isPlanFlow ? isDayValidForPlan : () => true} 
+        />
+        
+        {isPlanFlow && flow.activeDiscount && (
+           <div className="mt-4 p-3 bg-indigo-900/40 border border-indigo-400 rounded-md flex items-start gap-2">
+              <TagIcon className="w-5 h-5 text-indigo-300 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-indigo-100">Plan Activo: {flow.activeDiscount.code}</p>
+                <p className="text-xs text-indigo-200">Tienes {flow.activeDiscount.hours} horas disponibles. Selecciona las fechas en azul.</p>
+              </div>
+           </div>
+        )}
+      </div>
+
+      {/* Sección 2: Horas, Duración y Resumen (Abajo) */}
+      <div className="w-full flex flex-col gap-6">
+        <div>
+          <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+             Selecciona Duración
+          </h3>
+          <DurationSelector
+            selectedDuration={selectedDuration}
+            onSelectDuration={flow.setSelectedDuration}
+            visible={true}
+          />
+        </div>
+
+        <div>
+          <h3 className="text-lg font-medium text-white mb-4">
+            Horarios Disponibles para {formatDate(flow.selectedDate)}
+          </h3>
+          {flow.selectedDate ? (
+            <TimeSlotPicker
+              date={flow.selectedDate}
+              timeSlots={availability.getAvailableTimeSlots(flow.selectedDate)}
+              selectedSlot={flow.selectedTimeSlot}
+              duration={selectedDuration}
+              isSlotAvailable={availability.isSlotAvailable}
+              onSelectSlot={flow.setSelectedTimeSlot}
+              formatDate={formatDate}
+            />
+          ) : (
+            <p className="text-sm text-gray-400">
+              Selecciona una fecha en el calendario primero.
+            </p>
+          )}
+        </div>
+
+        {flow.summary && (
+          <div className="mt-auto">
+            <BookingSummary summary={flow.summary} />
+            <div className="mt-3 flex items-start gap-2 text-xs text-gray-400">
+              <InfoIcon className="w-4 h-4 shrink-0" />
+              <p>
+                Al continuar, aceptas nuestros términos y condiciones y políticas de cancelación.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 
   // ── Step: Payment ─────────────────────────────────────────

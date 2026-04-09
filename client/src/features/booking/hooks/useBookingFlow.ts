@@ -59,6 +59,8 @@ interface UseBookingFlowReturn {
   canProceedToPayment: boolean;
 
   isPlanFlow: boolean;
+  activePlan: PublicPackageData | null; // 🚀 AÑADIDO
+  activeDiscount: any | null;
   // Payment
   clientSecret: string;
 
@@ -81,7 +83,7 @@ export const useBookingFlow = (): UseBookingFlowReturn => {
 
   const [myDiscounts, setMyDiscounts] = useState<any[]>([]);
   const [selectedDiscountId, setSelectedDiscountId] = useState<string | null>(null);
-
+  const activeDiscount = myDiscounts.find(d => d.id === selectedDiscountId) || null;
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(
     activePlan ? "08:00" : ""
@@ -306,9 +308,10 @@ const goToPayment = async () => {
     canProceedToPayment,
 
     isPlanFlow,
-
+    activePlan,
+    activeDiscount,
+    
     clientSecret,
-
     isProcessing,
     paymentError,
     setPaymentError,

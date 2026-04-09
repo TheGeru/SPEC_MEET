@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from "../config/prisma";
+import { ReservationStatus } from '@prisma/client';
 import { constructEvent } from '../services/stripe.service';
 import { generatePasscode } from '../services/ttlock.service';
 import { createReservationEvent } from '../services/calendar.service';
@@ -39,7 +40,7 @@ export const handleStripeWebhook = async (req: Request, res: Response): Promise<
             const taxtRate = reservation?.room.location.taxRate ? Number(reservation.room.location.taxRate) : 0.16;
             const porcentajeIva = taxtRate * 100;
 
-            if(!reservation || reservation.status === 'PAID') {
+            if(!reservation || reservation.status === ReservationStatus.PAID) {
                 res.json({received: true});
                 return;
             }
@@ -65,7 +66,7 @@ export const handleStripeWebhook = async (req: Request, res: Response): Promise<
                 const updatedReservation = await tx.reservation.update({
                     where: {id: reservationId},
                     data: {
-                        status: 'PAID',
+                        status: ReservationStatus.PAID,
                         access_code: accessCode
                     }
                 });

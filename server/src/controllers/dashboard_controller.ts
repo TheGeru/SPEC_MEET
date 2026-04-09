@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/prisma';
+import { ReservationStatus } from '@prisma/client';
 
 // ── Filtro de estados "activos" (pagados = PENDING, PAID, CONFIRMED, COMPLETED) ──
 // Incluimos PENDING porque en este flujo PENDING = pago recibido pero aún
 // no confirmado por webhook. Excluimos solo CANCELLED.
-const ACTIVE_STATUSES = { notIn: ['CANCELLED'] };
+const ACTIVE_STATUSES = { not: ReservationStatus.CANCELLED};
 
 // ================================================================
 // GET /api/dashboard/stats  — Panel Administrador
@@ -163,7 +164,7 @@ export const getUserDashboardStats = async (req: Request, res: Response): Promis
             prisma.reservation.findMany({
                 where: {
                     userId,
-                    status: { notIn: ['CANCELLED'] },
+                    status: { not: ReservationStatus.CANCELLED},
                     start_time: { gte: now },
                 },
                 orderBy: { start_time: 'asc' },
@@ -173,7 +174,7 @@ export const getUserDashboardStats = async (req: Request, res: Response): Promis
                     userId,
                     OR: [
                         { start_time: { lt: now } },
-                        { status: { in: ['COMPLETED', 'CANCELLED'] } },
+                        { status: ReservationStatus.CANCELLED },
                     ],
                 },
                 orderBy: { start_time: 'desc' },
@@ -188,7 +189,11 @@ export const getUserDashboardStats = async (req: Request, res: Response): Promis
             const start      = new Date(r.start_time);
             const hoursUntil = (start.getTime() - now.getTime()) / 3600000;
             const isFuture   = start > now;
-            const isActive   = ['PENDING', 'CONFIRMED', 'PAID'].includes(r.status);
+            const isActive   = [
+                ReservationStatus.PENDING,
+                ReservationStatus.CONFIRMED,
+                ReservationStatus.PAID
+            ].includes(r.status);
             return {
                 id:               r.id,
                 date:             r.start_time.toISOString(),

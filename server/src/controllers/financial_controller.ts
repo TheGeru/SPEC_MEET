@@ -6,6 +6,8 @@
 
 import { Request, Response } from 'express';
 import { prisma } from '../config/prisma';
+import { ReservationStatus } from '@prisma/client';
+
 
 // ── GET /admin/financial/metrics ─────────────────────────────
 export const getFinancialMetrics = async (req: Request, res: Response): Promise<void> => {
@@ -27,7 +29,7 @@ export const getFinancialMetrics = async (req: Request, res: Response): Promise<
       const result = await prisma.reservation.aggregate({
         where: {
           start_time: { gte: start, lte: end },
-          status: { not: 'CANCELLED' },
+          status: { not: ReservationStatus.CANCELLED },
         },
         _sum: { total_paid: true },
       });
@@ -105,9 +107,11 @@ export const saveFinancialConfig = async (req: Request, res: Response): Promise<
     if (currentHourlyRate) {
       const room = await prisma.room.findFirst();
       if (room) {
-        await prisma.room.update({
-          where: { id: room.id },
-          data: { price_per_hour: currentHourlyRate },
+        await prisma.roomBaseRate.create({
+          data: {
+            roomId: room.id,
+            hourlyRate: currentHourlyRate
+          },
         });
       }
     }

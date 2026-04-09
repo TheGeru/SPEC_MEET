@@ -6,7 +6,6 @@ import { createPaymentIntent } from '../services/stripe.service';
 import { checkAvailability } from '../services/time_validation.service';
 import { notifyAdminsNewReservation, sendConfirmationEmail } from '../services/email.service';
 import { generatePasscode } from '../services/ttlock.service';
-import { error } from 'console';
 // ==========================================
 // 1. CREAR RESERVA
 // ==========================================

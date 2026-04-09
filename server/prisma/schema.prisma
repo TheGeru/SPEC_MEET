@@ -48,7 +48,9 @@ model Reservation {
 
   isExtension Boolean @default(false)
   parentReservationId String? 
-  
+  parentReservation Reservation? @relation("ExtensionHistory", fields: [parentReservationId], references: [id])
+  childReservation Reservation[] @relation("ExtensionHistory")
+
   discountCodeId String?
   discountCode DiscountCode? @relation(fields: [discountCodeId], references: [id])
 
