@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from "../config/prisma";
+import bcrypt from 'bcryptjs'
 
 export const getUsersWithReservations = async (req: Request, res: Response): Promise<void> => {
     try {
