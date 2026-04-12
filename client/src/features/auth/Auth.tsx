@@ -53,13 +53,7 @@ function AuthPageWrapper({ children }: { children: React.ReactNode }) {
 export function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const { error, setError, isLoading, handleSubmit } = useAuthForm();
-
-  const onLogin = handleSubmit(async () => {
-    // email/password/rememberMe come from the form component's local state
-    // We pass a callback that receives them
-    throw new Error("Use onSubmitDirect instead");
-  });
+  const { error, setError, isLoading} = useAuthForm();
 
   // Direct submit handler that receives form data
   const onSubmitDirect = async (
@@ -148,7 +142,7 @@ export function RegisterPage() {
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const { error, setError, message, setMessage, isLoading, handleSubmit } =
+  const { error, message, setMessage, isLoading, handleSubmit } =
     useAuthForm();
 
   const onSubmit = handleSubmit(async () => {

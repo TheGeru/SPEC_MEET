@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  DollarSignIcon, TrendingUpIcon, AlertTriangleIcon,
-  BarChart2Icon, ArrowUpIcon, ArrowDownIcon,
+  DollarSignIcon,AlertTriangleIcon, ArrowUpIcon, ArrowDownIcon,
   CalendarIcon, SaveIcon, RefreshCwIcon, Loader2, CheckCircleIcon,
   Calculator, X, HelpCircle
 } from 'lucide-react';

@@ -1,11 +1,16 @@
-// Este es un archivo de ejemplo que muestra cómo se integraría Stripe
 import { loadStripe } from '@stripe/stripe-js';
-// Publicar solo la clave pública en el frontend
-const stripePromise = loadStripe('pk_test_TU_CLAVE_PUBLICA_DE_STRIPE');
-export const createPaymentSession = async bookingData => {
+
+// Usamos la variable de entorno que creaste en el paso anterior
+const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_TU_CLAVE_PUBLICA_AQUI';
+const stripePromise = loadStripe(stripePublicKey);
+
+// 1. Le decimos a TypeScript que bookingData es un objeto cualquiera (any) explícitamente
+export const createPaymentSession = async (bookingData: any) => {
   try {
-    // Esta llamada debe ir a tu backend, nunca directamente a Stripe desde el frontend
-    const response = await fetch('/api/create-payment-session', {
+    // Usamos tu URL de Render usando import.meta.env
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    
+    const response = await fetch(`${API_URL}/reservations/create-payment-session`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -14,12 +19,22 @@ export const createPaymentSession = async bookingData => {
         bookingDetails: bookingData
       })
     });
+    
     const session = await response.json();
-    // Redirigir al checkout de Stripe o usar Stripe Elements
+
     const stripe = await stripePromise;
-    const result = await stripe.redirectToCheckout({
+    
+    // 2. Protegemos el código en caso de que Stripe falle al cargar (resuelve el error de null)
+    if (!stripe) {
+      console.error("No se pudo cargar Stripe.");
+      return;
+    }
+
+    // Como ya comprobamos que no es null, el error de redirectToCheckout desaparece
+    const result = await (stripe as any).redirectToCheckout({
       sessionId: session.id
     });
+    
     if (result.error) {
       console.error(result.error.message);
     }
@@ -27,9 +42,13 @@ export const createPaymentSession = async bookingData => {
     console.error('Error al procesar el pago:', error);
   }
 };
-export const getPaymentStatus = async sessionId => {
+
+// 3. Le decimos a TypeScript que sessionId siempre será un texto (string)
+export const getPaymentStatus = async (sessionId: string) => {
   try {
-    const response = await fetch(`/api/payment-status/${sessionId}`);
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    const response = await fetch(`${API_URL}/payment-status/${sessionId}`);
+    
     return await response.json();
   } catch (error) {
     console.error('Error al verificar el estado del pago:', error);

@@ -1,4 +1,4 @@
-import { UsersIcon, WifiIcon, InfoIcon, ArrowRightIcon } from "lucide-react"; // 👈 Añadimos InfoIcon
+import { UsersIcon, InfoIcon, ArrowRightIcon } from "lucide-react"; // 👈 Añadimos InfoIcon
 import { Link } from "react-router-dom"; // 👈 Necesario para navegar
 import type { Room } from "../models";
 
