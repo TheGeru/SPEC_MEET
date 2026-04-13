@@ -24,6 +24,7 @@ import {
   fetchRooms,
   fetchReservationsByDate,
   fetchMyBookedDates,
+  fetchBusinnesConfig,
 } from "../services/booking.service";
 
 interface UseAvailabilityProps {
@@ -46,6 +47,7 @@ interface UseAvailabilityReturn {
   isSlotAvailable: (date: string, time: string, duration: number) => boolean;
   hasDayReservations: (day: Date) => boolean;
   isDayValidForPlan: (dateStr: string, requiredHours: number) => boolean;
+  businessConfig: any;
   // Refresh
   refreshAvailability: (date: string) => Promise<void>;
   refreshMyBookings: () => Promise<void>;
@@ -58,6 +60,19 @@ export const useAvailability = ({roomId}: UseAvailabilityProps): UseAvailability
     ExistingReservation[]
   >([]);
   const [myBookedDates, setMyBookedDates] = useState<string[]>([]);
+  const [businessConfig, setBusinessConfig] = useState<any>(null);
+
+  useEffect(() => {
+    const loadBusinessConfig = async () => {
+      try {
+        const config = await fetchBusinnesConfig();
+        setBusinessConfig(config);
+      } catch (error) {
+        console.error("Error cargando configuración del negocio:", error);
+      }
+    };
+    loadBusinessConfig();
+  }, []);
 
   // ── Load default room on mount ──────────────────────────────
   useEffect(() => {
@@ -207,5 +222,6 @@ export const useAvailability = ({roomId}: UseAvailabilityProps): UseAvailability
     refreshAvailability,
     refreshMyBookings,
     isDayValidForPlan,
+    businessConfig
   };
 };

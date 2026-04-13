@@ -104,6 +104,7 @@ export default function Booking() {
           isPlanFlow={isPlanFlow}
           selectedDuration={selectedDuration}
           isDayValidForPlan={isPlanFlow ? isDayValidForPlan : () => true} 
+          businessConfig={availability.businessConfig}
         />
         
         {isPlanFlow && flow.activeDiscount && (

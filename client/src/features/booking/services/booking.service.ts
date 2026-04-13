@@ -78,3 +78,8 @@ export const extendReservation = async (
   });
   return response.data;
 };
+
+export const fetchBusinnesConfig = async () => {
+  const response = await api.get("/admin/settings/business");
+  return response.data;
+}

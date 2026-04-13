@@ -17,6 +17,7 @@ interface BookingCalendarProps {
   isPlanFlow: boolean;
   selectedDuration: number;
   isDayValidForPlan: (dateStr: string, requiredHours: number) => boolean;
+  businessConfig?: any;
 }
 
 const WEEKDAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
@@ -29,9 +30,24 @@ export default function BookingCalendar({
   isPlanFlow,
   selectedDuration,
   isDayValidForPlan,
+  businessConfig,
 }: BookingCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
+  const isDayClosed = (date: Date) => {
+    if (!businessConfig?.openingHours) return false; 
+    
+    const weekDays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayName = weekDays[date.getDay()];
+    
+    const daySettings = businessConfig.openingHours[dayName];
+    
+    // 🚀 AQUÍ ESTABA EL ERROR: Tu BD usa la palabra "closed", no "isOpen"
+    if (daySettings && daySettings.closed === true) {
+      return true; // ¡El negocio está cerrado!
+    }
+    return false;
+  };
   // ── Calendar generation ─────────────────────────────────────
   const generateDays = (): (Date | null)[] => {
     const year = currentMonth.getFullYear();
@@ -120,7 +136,8 @@ export default function BookingCalendar({
             isPlanInvalid = !isDayValidForPlan(dateString, selectedDuration);
           }
 
-          const isDisabled = isPast || isPlanInvalid;
+          const closedByAdmin = isDayClosed(day)
+          const isDisabled = isPast || isPlanInvalid || closedByAdmin;
 
           const isSelected = dateString === selectedDate;
           const isToday =
