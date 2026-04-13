@@ -41,20 +41,19 @@ const FeaturesPage: React.FC = () => {
                 <li className="flex items-start">
                   <CheckCircleIcon className="h-6 w-6 text-gray-400 mr-2 flex-shrink-0 mt-0.5" />
                   <span className="text-gray-300">
-                    Capacidad para 8 personas con mesa de juntas ejecutiva
+                    Capacidad para 10 personas con mesa de juntas ejecutiva
                   </span>
                 </li>
                 <li className="flex items-start">
                   <CheckCircleIcon className="h-6 w-6 text-gray-400 mr-2 flex-shrink-0 mt-0.5" />
                   <span className="text-gray-300">
-                    Smart TV 4K de 55" con conexiones HDMI y inalámbricas
+                    Acceso 100% autónomo
                   </span>
                 </li>
                 <li className="flex items-start">
                   <CheckCircleIcon className="h-6 w-6 text-gray-400 mr-2 flex-shrink-0 mt-0.5" />
                   <span className="text-gray-300">
-                    Sistema de videoconferencia con cámara HD y micrófono
-                    omnidireccional
+                    Pantalla con cable hdmi
                   </span>
                 </li>
                 <li className="flex items-start">
@@ -66,19 +65,13 @@ const FeaturesPage: React.FC = () => {
                 <li className="flex items-start">
                   <CheckCircleIcon className="h-6 w-6 text-gray-400 mr-2 flex-shrink-0 mt-0.5" />
                   <span className="text-gray-300">
-                    Pizarra digital interactiva
+                    Aire Acondicionado
                   </span>
                 </li>
                 <li className="flex items-start">
                   <CheckCircleIcon className="h-6 w-6 text-gray-400 mr-2 flex-shrink-0 mt-0.5" />
                   <span className="text-gray-300">
-                    Sistema de control de clima
-                  </span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircleIcon className="h-6 w-6 text-gray-400 mr-2 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-300">
-                    Servicio de bebidas y amenidades disponibles
+                    Privacidad garantizada
                   </span>
                 </li>
               </ul>

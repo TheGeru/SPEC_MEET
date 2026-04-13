@@ -10,7 +10,7 @@ const Footer: React.FC = () => {
                 <img src="/MEET.svg" alt=".MEET" className="h-25 w-auto object-contain  brightness-0 invert" />
               </div>
             </div>
-            <p className="text-secondary/45  text-sm leading-relaxed max-w-sm tracking-widest font-light">
+            <p className="text-secondary/40 text-sm">
               La solución integral para la gestión inteligente de salas de
               juntas.
             </p>
@@ -20,7 +20,7 @@ const Footer: React.FC = () => {
             <h3 className="text-secondary/40 font-medium mb-4">Legal</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/terms-and-conditions" className="text-secondary/40 hover:text-secondary text-xs leading-loose font-bold tracking-widest">
+                <Link to="/terms-and-conditions" className="text-secondary/40 hover:text-secondary text-sm ">
                   Términos y Condiciones
                 </Link>
               </li>
@@ -39,15 +39,17 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-secondary/40 font-medium mb-4">Contacto</h3>
             <p className="text-secondary/45 text-sm">
-              info@spec.com
+            <a href="mailto:spec.meet@gmail.com" className=" hover:text-secondary text-sm">
+              spec.meet@gmail.com
+            </a>
               <br />
-              +52 55 1234 5678
+              +52 1 446 117 0931
               <br />
             </p>
           </div>
         </div>
         <div className="mt-8 border-t border-zinc-800 pt-6">
-          <p className=" font-thin text-secondary text-sm text-center">
+          <p className=" text-secondary text-sm text-center">
             &copy; {new Date().getFullYear()} .MEET Todos los derechos
             reservados.
           </p>

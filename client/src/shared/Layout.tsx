@@ -15,7 +15,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const hasImageBackground = pagesWithImageBackground.includes(location.pathname);
 
   //Paginas sin Footer
-  const pagesWithoutFooter = ['/booking'];
+  const pagesWithoutFooter = ['/booking','/dashboard'];
   const hasFooter = !pagesWithoutFooter.includes(location.pathname);
 
   return (
