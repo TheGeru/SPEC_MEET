@@ -119,7 +119,7 @@ const Navbar: React.FC = () => {
 
                 {/* 2. PANEL ADMIN */}
                 {isAdmin && (
-                  <Link to="/admin" className="text-purple-300 hover:bg-zinc-800 hover:text-white block px-3 py-2 rounded-md text-base font-medium" onClick={() => setIsMenuOpen(false)}>
+                  <Link to="/admin" className="text-gray-400 hover:bg-zinc-800 hover:text-white block px-3 py-2 rounded-md text-base font-medium" onClick={() => setIsMenuOpen(false)}>
                     <div className="flex items-center">
                       <SettingsIcon className="mr-2 h-5 w-5" />
                       Panel Admin

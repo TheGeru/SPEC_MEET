@@ -72,14 +72,13 @@ const PlansPage: React.FC = () => {
             const baseRate = discountPct > 0 ? effectiveRate / (1 - discountPct / 100) : effectiveRate;
             const savings = (baseRate * blockHours) - plan.price;
 
-            // Clases dinámicas basadas en la imagen
-            const borderColor = isHourly ? "border-gray-300" : "border-[#9A7B4F] border-2";
+            const borderColor = isHourly ? "border-gray-100" : "border-[#9A7B4F] border-1";
             const btnStyle = isHourly 
-              ? "bg-white text-[#9A7B4F] border border-[#9A7B4F] hover:bg-[#9A7B4F] hover:text-white" 
+              ? "bg-white bg-opacity-5 border-transparent text-white hover:bg-white hover:bg-opacity-15" 
               : "bg-[#9A7B4F] text-white hover:bg-[#8e7149]";
 
             return (
-              <div key={plan.id} className={`bg-white rounded-xl shadow-lg relative flex flex-col p-8 ${borderColor}`}>
+              <div key={plan.id} className={`bg-black bg-opacity-40 backdrop-blur-sm rounded-lg shadow-lg  relative flex flex-col p-8 ${borderColor}`}>
                 
                 {/* Badge Descuento (Top Right) */}
                 {!isHourly && discountPct > 0 && (
@@ -89,23 +88,23 @@ const PlansPage: React.FC = () => {
                 )}
 
                 {/* Cabecera */}
-                <h3 className="text-2xl font-serif font-bold text-black mb-3">{plan.name}</h3>
-                <p className="text-sm text-gray-600 mb-6 min-h-[40px]">
+                <h3 className="text-2xl font-serif font-bold text-white mb-3">{plan.name}</h3>
+                <p className="text-sm text-gray-200 mb-6 min-h-[40px]">
                   {plan.description || "Reserva el tiempo que necesites."}
                 </p>
 
                 {/* Precio */}
                 <div className="mb-2">
-                  <span className="text-4xl font-serif font-bold text-black">
+                  <span className="text-4xl  font-bold text-white">
                     ${plan.price.toLocaleString('es-MX', { maximumFractionDigits: 0 })}
                   </span>
-                  <span className="text-sm text-gray-500 font-serif ml-1">
+                  <span className="text-sm text-gray-300  ml-1">
                     / {isHourly ? "hora" : isFullDay ? "día" : "bloque"}
                   </span>
                 </div>
 
                 {/* Subtexto Dorado */}
-                <div className="text-[13px] font-bold text-[#9A7B4F] mb-6 pb-6 border-b border-gray-200">
+                <div className="text-[13px] text-[#9A7B4F] mb-6 pb-6 border-b border-gray-200">
                   {isHourly ? (
                     "Tarifa base · Sin descuento"
                   ) : (
@@ -116,14 +115,14 @@ const PlansPage: React.FC = () => {
                 {/* Tabla de Info */}
                 <div className="space-y-4 mb-8 flex-1">
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-500">{isHourly ? "Mínimo" : "Duración"}</span>
-                    <span className="font-bold text-black">{isHourly ? "1 hora" : `${blockHours} horas fijas`}</span>
+                    <span className="text-gray-300">{isHourly ? "Mínimo" : "Duración"}</span>
+                    <span className="font-bold text-white">{isHourly ? "1 hora" : `${blockHours} horas fijas`}</span>
                   </div>
                   
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-500">{isHourly ? "Horario" : "Descuento"}</span>
+                    <span className="text-gray-300">{isHourly ? "Horario" : "Descuento"}</span>
                     {isHourly ? (
-                      <span className="font-bold text-black">Flexible</span>
+                      <span className="font-bold text-white">Flexible</span>
                     ) : (
                       <span className="font-bold text-emerald-700">{discountPct}% off</span>
                     )}
@@ -131,8 +130,8 @@ const PlansPage: React.FC = () => {
                   
                   {isHourly && (
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-500">Descuento</span>
-                      <span className="font-bold text-black">—</span>
+                      <span className="text-gray-300">Descuento</span>
+                      <span className="font-bold text-white">—</span>
                     </div>
                   )}
 
@@ -145,8 +144,8 @@ const PlansPage: React.FC = () => {
                         return (
                           <div key={idx} className="flex items-center bg-[#f7f7f7] rounded-md p-3">
                             <span className={`w-2 h-2 rounded-full mr-3 shrink-0 ${dotColor}`}></span>
-                            <span className="text-sm font-bold text-black w-24">{opt.label}</span>
-                            <span className="text-sm text-gray-500">{opt.startTime} – {opt.endTime}</span>
+                            <span className="text-sm font-bold text-white w-24">{opt.label}</span>
+                            <span className="text-sm text-gray-300">{opt.startTime} – {opt.endTime}</span>
                           </div>
                         );
                       })}
@@ -167,7 +166,7 @@ const PlansPage: React.FC = () => {
         </div>
 
         {/* TU SECCIÓN INFERIOR ORIGINAL */}
-        <div className="mt-16 bg-zinc-800 rounded-lg p-8 shadow-lg">
+        <div className="mt-16 bg-black bg-opacity-40 backdrop-blur-sm rounded-lg shadow-lg p-8 ">
           <h2 className="text-2xl font-bold text-white mb-4">
             ¿Necesitas un plan personalizado?
           </h2>
@@ -176,7 +175,7 @@ const PlansPage: React.FC = () => {
             podemos crear un plan personalizado para ti o tu empresa.
           </p>
           <div className="flex flex-wrap gap-4">
-            <Link to="/contact" className="inline-flex items-center px-6 py-3 border border-gray-700 text-base font-medium rounded-md shadow-sm text-white bg-zinc-700 hover:bg-zinc-600">
+            <Link to="/contact" className="inline-flex items-center px-6 py-3  text-base font-medium bg-white bg-opacity-15 backdrop-blur-sm text-white rounded-md hover:bg-opacity-30 transition-all border border-white border-opacity-30 disabled:opacity-50">
               Contáctanos
             </Link>
           </div>
