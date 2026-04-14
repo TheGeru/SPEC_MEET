@@ -437,7 +437,7 @@ export const extendReservation = async (req: Request, res: Response) => {
         const newStart = original.end_time;
         const newEnd = new Date(newStart.getTime() + (additionalHours * 60 * 60 * 1000));
 
-        const isAvailable = await checkAvailability(original.roomId, newStart, newEnd);
+        const isAvailable = await checkAvailability(original.roomId, newStart, newEnd, original.id);
         if(!isAvailable){
             return res.status(409).json({error: "No es posible extender; la sala ya esta reservada despues de tu horario"});
         }
