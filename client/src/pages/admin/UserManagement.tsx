@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { SearchIcon, UserIcon, ClockIcon, DollarSignIcon, PlusIcon, XCircleIcon, FilterIcon, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { SearchIcon, UserIcon, ArrowLeftIcon,ClockIcon, DollarSignIcon, PlusIcon, XCircleIcon, FilterIcon, Loader2 } from 'lucide-react';
 import api from '../../api/axios';
 
 const UserManagement: React.FC = () => {
+  const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -149,12 +151,29 @@ const handleAddHours = async () => {
   );
 
   return <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-white">Gestión de Usuarios</h1>
-        {/* 🚀 BOTÓN NUEVO */}
+    {/* HEADER DE USUARIOS */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+        
+        {/* Lado Izquierdo: Botón Atrás + Títulos */}
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate('/admin')} 
+            className="p-2 bg-zinc-800/50 border border-zinc-700 text-gray-400 rounded-lg hover:bg-zinc-700 hover:text-white transition-all shadow-sm shrink-0"
+            title="Volver al panel principal"
+          >
+            <ArrowLeftIcon className="w-5 h-5" />
+          </button>
+          
+          <div>
+            <h1 className="text-3xl font-bold text-white">Gestión de Usuarios</h1>
+            <p className="text-sm text-gray-400 mt-1">Directorio y métricas de clientes</p>
+          </div>
+        </div>
+
+        {/* Lado Derecho: Botón Nuevo Admin */}
         <button 
           onClick={() => setShowAddAdminModal(true)}
-          className="bg-zinc-700 hover:bg-zinc-600 text-white px-4 py-2 rounded-md flex items-center transition-colors text-sm font-medium border border-zinc-600"
+          className="bg-zinc-700 hover:bg-zinc-600 text-white px-4 py-2 rounded-md flex items-center transition-colors text-sm font-medium border border-zinc-600 shrink-0"
         >
           <PlusIcon className="h-4 w-4 mr-2" />
           Nuevo Administrador

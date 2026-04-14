@@ -157,9 +157,7 @@ export const useAvailability = ({roomId}: UseAvailabilityProps): UseAvailability
   const isSlotAvailable = (dateStr: string, timeStr: string, duration: number): boolean => {
     const proposedStart = new Date(`${dateStr}T${timeStr}:00`);
     const proposedEnd = new Date(proposedStart);
-    
-    // 🚀 FIX CRÍTICO: Forzamos que la duración sea un número y sumamos MINUTOS.
-    // Esto evita la concatenación de strings ("812") y soporta fracciones (1.5h).
+
     const numericDuration = Number(duration) || 1; 
     proposedEnd.setMinutes(proposedEnd.getMinutes() + (numericDuration * 60));
 
@@ -182,8 +180,9 @@ export const useAvailability = ({roomId}: UseAvailabilityProps): UseAvailability
       const end = reservation.end instanceof Date ? reservation.end : new Date(reservation.end);
 
       // Expandimos la "sombra" de la reserva existente para incluir limpieza
-      const busyStart = start.getTime() - cleaningBufferMs;
-      const busyEnd = end.getTime() + cleaningBufferMs;
+      const buffer = reservation.type === 'MAINTENANCE' ? 0 : cleaningBufferMs;
+      const busyStart = start.getTime() - buffer;
+      const busyEnd = end.getTime() + buffer;
         
       return (
         proposedStart.getTime() < busyEnd && 

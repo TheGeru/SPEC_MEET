@@ -16,9 +16,10 @@
  */
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   DollarSignIcon, FileTextIcon, MapPinIcon, WifiIcon,
-  PackageIcon, ShieldIcon, Building2Icon, Loader2, AlertCircle,
+  PackageIcon, ShieldIcon, Building2Icon, ArrowLeftIcon,Loader2, AlertCircle,
 } from "lucide-react";
 import { SETTINGS_TAB, type SettingsTab } from "./models";
 import { useAdminSettings } from "./hooks/UseAdminSettings";
@@ -62,6 +63,7 @@ function EmptyState({ message }: { message: string }) {
 // ─── Container ────────────────────────────────────────────────
 
 export default function AdminSettings() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<SettingsTab>(SETTINGS_TAB.LOCATION);
   const settings = useAdminSettings();
 
@@ -171,7 +173,7 @@ export default function AdminSettings() {
     }
   };
 
-  return (
+return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 pb-20">
       {/* Error banner */}
       {settings.loadError && (
@@ -183,13 +185,25 @@ export default function AdminSettings() {
 
       {/* HEADER GLOBAL REDISEÑADO */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 border-b border-zinc-800 pb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">
-            Configuración del Sistema
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            Gestiona ubicaciones, precios y reglas de tu negocio.
-          </p>
+        
+        {/* 🚀 Lado Izquierdo: Botón Atrás + Títulos */}
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate('/admin')} 
+            className="p-2 bg-zinc-800/50 border border-zinc-700 text-gray-400 rounded-lg hover:bg-zinc-700 hover:text-white transition-all shadow-sm shrink-0"
+            title="Volver al panel principal"
+          >
+            <ArrowLeftIcon className="w-5 h-5" />
+          </button>
+          
+          <div>
+            <h1 className="text-3xl font-bold text-white tracking-tight">
+              Configuración del Sistema
+            </h1>
+            <p className="text-zinc-400 text-sm mt-1">
+              Gestiona ubicaciones, precios y reglas de tu negocio.
+            </p>
+          </div>
         </div>
         
         {/* SELECTOR GLOBAL DE SALA (Actúa sobre todas las pestañas) */}

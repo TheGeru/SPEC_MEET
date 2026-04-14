@@ -332,7 +332,7 @@ const UserDashboard: React.FC = () => {
       if(data.clientSecret){
         showToast("Intencion de extension creada. Procedimiento al pago...");
         setExtensionClientSecret(data.clientSecret);
-        setExtendingAmount(data.totalAmount || 0);
+        setExtendingAmount(data.totalExtra || 0);
       }
       setExtendRes(null);
     } catch (err: any) {

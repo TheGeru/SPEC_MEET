@@ -90,8 +90,8 @@ export default function Booking() {
   );
 
 // ── Step: Date & Time ───────────────────────────────────────
-  const renderDateStep = () => (
-    <div className="flex flex-col gap-8"> {/* 🚀 FIX: Eliminado el lg:flex-row para que ocupe el 100% del ancho */}
+const renderDateStep = () => (
+    <div className="flex flex-col gap-8">
       
       {/* Sección 1: Calendario (Arriba) */}
       <div className="w-full">
@@ -106,13 +106,39 @@ export default function Booking() {
           isDayValidForPlan={isPlanFlow ? isDayValidForPlan : () => true} 
           businessConfig={availability.businessConfig}
         />
+
+        {/* 🚀 NUEVO: Selector de Beneficios (DiscountCodes del usuario) */}
+        {!isPlanFlow && flow.myDiscounts.length > 0 && (
+          <div className="mt-6 p-4 bg-indigo-900/20 border border-indigo-500/30 rounded-lg">
+            <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+              <TagIcon className="w-4 h-4 text-indigo-400" /> Mis Beneficios Disponibles
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              {flow.myDiscounts.map(discount => (
+                <button
+                  key={discount.id}
+                  onClick={() => flow.setSelectedDiscountId(
+                    flow.selectedDiscountId === discount.id ? null : discount.id
+                  )}
+                  className={`px-3 py-2 rounded-md text-xs font-medium transition-all border ${
+                    flow.selectedDiscountId === discount.id 
+                    ? "bg-indigo-600 text-white border-indigo-400 shadow-lg" 
+                    : "bg-white/5 text-gray-400 border-white/10 hover:bg-white/10"
+                  }`}
+                >
+                  {discount.code} ({discount.hours}h)
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         
         {isPlanFlow && flow.activeDiscount && (
            <div className="mt-4 p-3 bg-indigo-900/40 border border-indigo-400 rounded-md flex items-start gap-2">
               <TagIcon className="w-5 h-5 text-indigo-300 shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-indigo-100">Plan Activo: {flow.activeDiscount.code}</p>
-                <p className="text-xs text-indigo-200">Tienes {flow.activeDiscount.hours} horas disponibles. Selecciona las fechas en azul.</p>
+                <p className="text-xs text-indigo-200">Tienes {flow.activeDiscount.hours} horas disponibles.</p>
               </div>
            </div>
         )}
@@ -120,16 +146,20 @@ export default function Booking() {
 
       {/* Sección 2: Horas, Duración y Resumen (Abajo) */}
       <div className="w-full flex flex-col gap-6">
-        <div>
-          <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
-             Selecciona Duración
-          </h3>
-          <DurationSelector
-            selectedDuration={selectedDuration}
-            onSelectDuration={flow.setSelectedDuration}
-            visible={true}
-          />
-        </div>
+        
+        {/* 🚀 CAMBIO: Ocultamos el selector de duración si es un flujo de PLAN */}
+        {!isPlanFlow && (
+          <div>
+            <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+               Selecciona Duración
+            </h3>
+            <DurationSelector
+              selectedDuration={selectedDuration}
+              onSelectDuration={flow.setSelectedDuration}
+              visible={true}
+            />
+          </div>
+        )}
 
         <div>
           <h3 className="text-lg font-medium text-white mb-4">
@@ -138,7 +168,10 @@ export default function Booking() {
           {flow.selectedDate ? (
             <TimeSlotPicker
               date={flow.selectedDate}
-              timeSlots={availability.getAvailableTimeSlots(flow.selectedDate)}
+              /* 🚀 CAMBIO CRÍTICO: Filtramos los slots para mostrar solo donde cabe el bloque completo */
+              timeSlots={availability.getAvailableTimeSlots(flow.selectedDate).filter(slot => 
+                availability.isSlotAvailable(flow.selectedDate, slot, selectedDuration)
+              )}
               selectedSlot={flow.selectedTimeSlot}
               duration={selectedDuration}
               isSlotAvailable={availability.isSlotAvailable}

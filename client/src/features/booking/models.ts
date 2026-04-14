@@ -120,6 +120,8 @@ export interface BookingConfirmation {
 export interface ExistingReservation {
   start: Date;
   end: Date;
+  type?: 'RESERVATION' | 'MAINTENANCE';
+  reason?: string;
 }
 
 // ─── ZOD SCHEMAS (Zod 4 syntax) ──────────────────────────────

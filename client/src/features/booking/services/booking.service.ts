@@ -49,7 +49,7 @@ export const fetchReservationsByDate = async (
   return response.data.map((res) => ({
     start: new Date(res.start),
     end: new Date(res.end),
-    type: res.type || 'RESERVATION',
+    type: (res.type || 'RESERVATION') as 'RESERVATION' | 'MAINTENANCE',
     reason: res.reason || undefined
   }));
 };

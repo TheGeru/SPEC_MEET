@@ -251,10 +251,14 @@ const goToPayment = async () => {
         discountCodeId:  selectedDiscountId
       });
 
-      if (summary.total === 0) {
+      const isFreeReservation = !result.clientSecret || summary.total < 0.5;
+
+      if (isFreeReservation) {
+        console.log("🎁 ¡Reserva gratuita detectada! Saltando a confirmación.");
         setCurrentStep(BOOKING_STEP.CONFIRMATION);
-      } else if (result.clientSecret) {
-        setClientSecret(result.clientSecret);
+      } else {
+        console.log("💳 Requiere pago. Enviando a Stripe.");
+        setClientSecret(result.clientSecret || "");
         setCurrentStep(BOOKING_STEP.PAYMENT);
       }
     } catch (error: any) {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ClockIcon, UserIcon, XCircleIcon, LockIcon, UnlockIcon, Loader, Calendar as CalendarIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; // 🚀 Nuevo
+import { ClockIcon, UserIcon, XCircleIcon, ArrowLeftIcon,LockIcon, UnlockIcon, Loader, Calendar as CalendarIcon } from 'lucide-react';
 import api from '../../api/axios';
 
 interface CalendarReservation {
@@ -20,6 +21,7 @@ interface CalendarBlock {
 type BlockType = 'hours' | 'fullDay' | 'range';
 
 const AdminCalendar: React.FC = () => {
+  const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showBlockModal, setShowBlockModal] = useState(false);
@@ -176,23 +178,44 @@ const AdminCalendar: React.FC = () => {
 
   // --- RENDER ---
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-white">Calendario de Reservas</h1>
-        <div className="flex space-x-3">
+<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      
+      {/* HEADER DEL CALENDARIO */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+        
+        {/* Contenedor Izquierdo: Botón Atrás + Títulos */}
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate('/admin')} 
+            className="p-2 bg-zinc-800/50 border border-zinc-700 text-gray-400 rounded-lg hover:bg-zinc-700 hover:text-white transition-all shadow-sm shrink-0"
+            title="Volver al panel principal"
+          >
+            <ArrowLeftIcon className="w-5 h-5" />
+          </button>
+          
+          <div>
+            <h1 className="text-3xl font-bold text-white">Calendario de Reservas</h1>
+            <p className="text-sm text-gray-400 mt-1">Gestión de disponibilidad y bloqueos</p>
+          </div>
+        </div>
+
+        {/* Contenedor Derecho: Botones de Acción */}
+        <div className="flex items-center space-x-3">
             {isLoading && <Loader className="animate-spin text-primary" />}
-            <button onClick={() => { 
-                setSelectedDate(new Date()); 
-                setBlockEndDate(''); // Reset fecha fin
-                setShowBlockModal(true); 
-            }} 
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-700 hover:bg-gray-600">
+            <button 
+                onClick={() => { 
+                    setSelectedDate(new Date()); 
+                    setBlockEndDate(''); // Reset fecha fin
+                    setShowBlockModal(true); 
+                }} 
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-700 hover:bg-gray-600 transition-colors"
+            >
                 <LockIcon className="h-4 w-4 mr-2" />
                 Bloquear Horario
             </button>
         </div>
       </div>
-
+      
       {/* Calendario UI */}
       <div className="bg-zinc-900 rounded-lg shadow-lg p-6 mb-8">
         <div className="flex items-center justify-between mb-6">

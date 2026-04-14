@@ -2,10 +2,10 @@
  * ADMIN-DASHBOARD FEATURE — CONTAINER
  */
 
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   CalendarIcon, UsersIcon, SettingsIcon,
-  Loader2, RefreshCwIcon, AlertCircleIcon,
+  Loader2, RefreshCwIcon, AlertCircleIcon, ArrowLeftIcon
 } from "lucide-react";
 import { useDashboardData } from "./hooks/useDashboardData";
 import StatsCards from "./components/Statscards";
@@ -15,6 +15,7 @@ import OccupancyByDay from "./components/Occupancybyday";
 import QuickActions from "./components/Quickactions";
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const { data, isLoading, error, lastUpdated, refresh } = useDashboardData();
 
   if (isLoading && !data) {
@@ -46,15 +47,34 @@ export default function AdminDashboard() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Panel Administrativo</h1>
-          <p className="text-gray-400 mt-2">Gestiona tu sala de juntas inteligente</p>
-          {lastUpdated && (
-            <p className="text-xs text-gray-600 mt-1">Actualizado: {lastUpdated.toLocaleTimeString("es-MX")}</p>
-          )}
+        
+        {/* 🚀 NUEVO: Agrupamos el botón de regreso y los títulos en este div */}
+        <div className="flex items-center gap-4">
+          
+          {/* Botón de Atrás */}
+          <button 
+            onClick={() => navigate(-1)} 
+            className="p-2 bg-zinc-800/50 border border-zinc-700 text-gray-400 rounded-lg hover:bg-zinc-700 hover:text-white transition-all shadow-sm shrink-0"
+            title="Volver"
+          >
+            <ArrowLeftIcon className="w-5 h-5" />
+          </button>
+
+          {/* Textos del Header */}
+          <div>
+            <h1 className="text-3xl font-bold text-white">Panel Administrativo</h1>
+            <p className="text-gray-400 mt-1">Gestiona tu sala de juntas inteligente</p>
+            {lastUpdated && (
+              <p className="text-xs text-gray-600 mt-1">Actualizado: {lastUpdated.toLocaleTimeString("es-MX")}</p>
+            )}
+          </div>
+
         </div>
+
+        {/* Botones de acción derecha */}
         <div className="mt-4 md:mt-0 flex flex-wrap gap-3">
           <Link to="/admin/calendar" className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-700 hover:bg-gray-600">
             <CalendarIcon className="h-4 w-4 mr-2" /> Calendario
