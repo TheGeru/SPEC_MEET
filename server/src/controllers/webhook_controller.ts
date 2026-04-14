@@ -148,7 +148,8 @@ export const handleStripeWebhook = async (req: Request, res: Response): Promise<
             res.status(500).json({ error: "Error interno" });
             return;
         }
-    }
-    // 4. RESPONDER A STRIPE RÁPIDO
+    } else {
+        // 4. RESPONDER A STRIPE RÁPIDO
     res.json({ received: true });
+    }
 };
