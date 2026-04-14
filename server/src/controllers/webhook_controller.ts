@@ -137,12 +137,20 @@ export const handleStripeWebhook = async (req: Request, res: Response): Promise<
             (async () => {
                 try {
                     await notifyAdminsNewReservation(reservationId);
-            await createReservationEvent({
-                summary: `Reserva SPEC MEET: ${reservation.room.name} - ${reservation.user.name}`,
-                description: `Cliente: ${reservation.user.name}\nCorreo: ${reservation.user.email}\nID Reserva: ${reservation.id}`,
-                startTime: reservation.start_time,
-                endTime: reservation.end_time
-            });
+                    
+                const calendarEventId = await createReservationEvent({
+                    summary: `Reserva SPEC MEET: ${reservation.room.name} - ${reservation.user.name}`,
+                    description: `Cliente: ${reservation.user.name}\nCorreo: ${reservation.user.email}\nID Reserva: ${reservation.id}`,
+                    startTime: reservation.start_time,
+                    endTime: reservation.end_time
+                });
+
+                if (calendarEventId) {
+                    await prisma.reservation.update({
+                        where: { id: reservationId },
+                        data: { calendar_event_id: calendarEventId }
+                    });
+                }
                 await sendConfirmationEmail(reservation, accessCode);
                 console.log(`✅ Proceso completado para Reserva: ${reservationId}`);
                 } catch(notifError){

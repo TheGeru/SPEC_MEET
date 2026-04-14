@@ -49,3 +49,15 @@ export const createReservationEvent = async (reserva: {
         return null;
     }
 };
+
+export const deleteCalendarEvent = async (eventId: string): Promise<void> => {
+    try {
+        await calendar.events.delete({
+            calendarId: CALENDAR_ID,
+            eventId: eventId,
+        });
+        console.log(`🗑️ Evento ${eventId} eliminado del calendario`);
+    } catch (error) {
+        console.error('❌ Error eliminando evento del calendario:', error);
+    }
+};

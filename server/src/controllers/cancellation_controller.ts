@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import prisma from "../config/prisma";
 import { createRefund } from "../services/stripe.service";
+import { deleteCalendarEvent } from "../services/calendar.service";
 
 export const cancelReservation = async (req: Request, res: Response) => {
     try {
@@ -52,6 +53,10 @@ export const cancelReservation = async (req: Request, res: Response) => {
             where: {id: reservationId},
             data: {status: "CANCELLED"}
         });
+
+        if (reservation.calendar_event_id) {
+            await deleteCalendarEvent(reservation.calendar_event_id);
+        }
 
         res.status(200).json({
             message: "Reserva Cancelada con exito",

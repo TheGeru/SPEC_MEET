@@ -67,6 +67,7 @@ model Reservation {
   package        PricePackage? @relation(fields: [packageId], references: [id])
   room           Room         @relation(fields: [roomId], references: [id])
   user           User         @relation(fields: [userId], references: [id])
+  calendar_event_id String?
 
   @@index([userId])
   @@index([roomId, start_time, end_time])
