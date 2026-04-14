@@ -447,6 +447,7 @@ export const extendReservation = async (req: Request, res: Response) => {
             orderBy: {effectiveFrom: 'desc'}
         });
 
+        console.log("Rate encontrada:", rate);
         console.log("Extension request:", { reservationId, additionalHours, body: req.body });
 
         const taxRate = Number(original.room.location.taxRate || 0.16);
