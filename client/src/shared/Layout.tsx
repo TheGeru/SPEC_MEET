@@ -11,7 +11,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   
   // Páginas con imagen de fondo
-  const pagesWithImageBackground = ['/', '/booking', '/dashboard','/login','/register','/plans'];
+  const pagesWithImageBackground = ['/', '/booking', '/dashboard','/login','/register','/plans','/contact'];
   const hasImageBackground = pagesWithImageBackground.includes(location.pathname);
 
   //Paginas sin Footer

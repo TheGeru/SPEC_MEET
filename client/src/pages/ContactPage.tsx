@@ -44,11 +44,11 @@ const ContactPage: React.FC = () => {
     }, 3000)
   }
   return (
-    <div className="w-full min-h-screen bg-gradient-to-b from-black to-zinc-900">
+    <div className="w-full min-h-screen ">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-white mb-4">Contáctanos</h1>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+          <p className="text-xl text-gray-100 max-w-3xl mx-auto">
             ¿Tienes preguntas o necesitas un plan personalizado? Estamos aquí
             para ayudarte
           </p>
@@ -57,7 +57,7 @@ const ContactPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Contact Information */}
           <div className="lg:col-span-1 space-y-6">
-            <div className="bg-zinc-800 rounded-lg p-6 shadow-lg border border-zinc-700">
+            <div className="bg-white/5 backdrop-blur-xl border border-white/20 rounded-lg p-6 shadow-lg">
               <h2 className="text-xl font-bold text-white mb-6">
                 Información de Contacto
               </h2>
@@ -136,7 +136,7 @@ const ContactPage: React.FC = () => {
 
           {/* Contact Form */}
           <div className="lg:col-span-2">
-            <div className="bg-zinc-800 rounded-lg p-8 shadow-lg border border-zinc-700">
+            <div className="bg-white/5 backdrop-blur-xl border border-white/20 rounded-lg p-8 shadow-lg">
               <h2 className="text-2xl font-bold text-white mb-6">
                 Envíanos un Mensaje
               </h2>
@@ -149,7 +149,7 @@ const ContactPage: React.FC = () => {
                   <h3 className="text-xl font-bold text-white mb-2">
                     ¡Mensaje Enviado!
                   </h3>
-                  <p className="text-gray-300">
+                  <p className="text-white/80">
                     Gracias por contactarnos. Te responderemos pronto.
                   </p>
                 </div>
@@ -159,7 +159,7 @@ const ContactPage: React.FC = () => {
                     <div>
                       <label
                         htmlFor="name"
-                        className="block text-sm font-medium text-gray-300 mb-2"
+                        className="block text-sm font-medium text-white/90 mb-2"
                       >
                         Nombre completo *
                       </label>
@@ -170,13 +170,13 @@ const ContactPage: React.FC = () => {
                         required
                         value={formData.name}
                         onChange={handleChange}
-                        className="w-full px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                        className="w-full px-4 py-2 bg-black/30 border border-white/10 rounded-md text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/30 transition-all"
                       />
                     </div>
                     <div>
                       <label
                         htmlFor="email"
-                        className="block text-sm font-medium text-gray-300 mb-2"
+                        className="block text-sm font-medium text-white/90 mb-2"
                       >
                         Correo electrónico *
                       </label>
@@ -187,7 +187,7 @@ const ContactPage: React.FC = () => {
                         required
                         value={formData.email}
                         onChange={handleChange}
-                        className="w-full px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                        className="w-full px-4 py-2 bg-black/30 border border-white/10 rounded-md text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/30 transition-all"
                         
                       />
                     </div>
@@ -220,7 +220,7 @@ const ContactPage: React.FC = () => {
                   <div>
                     <label
                       htmlFor="message"
-                      className="block text-sm font-medium text-gray-300 mb-2"
+                      className="block text-sm font-medium text-white/90 mb-2"
                     >
                       Mensaje *
                     </label>
@@ -231,7 +231,7 @@ const ContactPage: React.FC = () => {
                       rows={6}
                       value={formData.message}
                       onChange={handleChange}
-                      className="w-full px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                      className="w-full px-4 py-2 bg-black/30 border border-white/10 rounded-md text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/30 transition-all"
                    
                     />
                   </div>
