@@ -50,6 +50,7 @@ import AdminFinancial from "./pages/admin/AdminFinancial";
 import AdminReports from "./pages/admin/AdminReports";
 import UserManagement from "./pages/admin/UserManagement";
 import AdminCalendar from "./pages/admin/AdminCalendar";
+import ContactPage from "./pages/ContactPage";
 
 
 // ─── Layout Wrapper ───────────────────────────────────────────
@@ -75,6 +76,7 @@ export function AppRoutes() {
         <Route path="/gallery" element={<GalleryPage />} />
         <Route path="/plans" element={<PlansPage />} />
         <Route path="/terms-and-conditions" element={<TCPage />} />
+        <Route path="/contact" element={<ContactPage />} />
       </Route>
 
       {/* ─────────────────────────────────────────────────────
