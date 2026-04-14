@@ -1,15 +1,11 @@
 import { google } from 'googleapis';
-import path from 'path';
-
-// Buscamos el archivo JSON en la raíz de tu carpeta 'server'
-const KEYFILEPATH = path.join(process.cwd(), 'Google_calendar_key.json');
 
 // Definimos el alcance (scope): Queremos poder leer y escribir eventos
 const SCOPES = ['https://www.googleapis.com/auth/calendar.events'];
 
 // Inicializamos la autenticación de nuestro "Empleado Virtual" (Bot)
 const auth = new google.auth.GoogleAuth({
-    keyFile: KEYFILEPATH,
+    credentials: JSON.parse(process.env.GOOGLE_CALENDAR_CREDENTIALS as string),
     scopes: SCOPES,
 });
 

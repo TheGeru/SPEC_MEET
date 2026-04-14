@@ -1,13 +1,18 @@
 import {prisma} from '../config/prisma';
 import nodemailer from 'nodemailer';
 
-const transport = nodemailer.createTransport({
-    service: 'gmail',
+const mailConfig = {
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
     },
-});
+    family: 4 // Esto fuerza el uso de IPv4 en Render
+};
+
+const transport = nodemailer.createTransport(mailConfig);
 
 export const sendEmail = async (to: string, subject: string, htmlContent: string) => {
     try {
