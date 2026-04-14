@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@infrastructure/AuthContext';
 import {
   CalendarIcon, ClockIcon, KeyIcon, CheckCircleIcon,
   XCircleIcon, AlertCircleIcon, TagIcon, Loader2,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../infrastructure/AuthContext';
+import { useAuth } from '@infrastructure/AuthContext';
 import { MenuIcon, XIcon, UserIcon, CalendarIcon, SettingsIcon, LogOutIcon, HomeIcon, InfoIcon, TagIcon } from 'lucide-react';
 
 const Navbar: React.FC = () => {

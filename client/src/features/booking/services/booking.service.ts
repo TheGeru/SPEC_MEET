@@ -21,6 +21,7 @@ interface ReservationByDateResponse {
   start: string;
   end: string;
   type: string;
+  reason: string
 }
 
 export const fetchRooms = async (): Promise<Room[]> => {
@@ -37,12 +38,19 @@ export const fetchReservationsByDate = async (
   roomId: string,
   date: string
 ): Promise<ExistingReservation[]> => {
+  // 🚀 RECUPERAMOS EL FIX DE MÉXICO Y START/END OF DAY
+  const startOfDay = `${date}T00:00:00-06:00`;
+  const endOfDay = `${date}T23:59:59-06:00`;
+
   const response = await api.get<ReservationByDateResponse[]>(
-    `/reservations?roomId=${roomId}&date=${date}`
+    `/reservations?roomId=${roomId}&startOfDay=${startOfDay}&endOfDay=${endOfDay}`
   );
+  
   return response.data.map((res) => ({
     start: new Date(res.start),
-    end:   new Date(res.end),
+    end: new Date(res.end),
+    type: res.type || 'RESERVATION',
+    reason: res.reason || undefined
   }));
 };
 
