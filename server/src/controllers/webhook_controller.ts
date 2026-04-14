@@ -25,7 +25,13 @@ export const handleStripeWebhook = async (req: Request, res: Response): Promise<
         const paymentIntent = event.data.object as any;
         const reservationId = paymentIntent.metadata.reservationId;
 
-        console.log(`💰 Pago confirmado por Stripe. Procesando Reserva ID: ${reservationId}`);
+        console.log(`💰 Evento ${event.type} recibido. ID Reserva:`, reservationId);
+
+        if (!reservationId) {
+            console.error("❌ ERROR: El pago no tiene un reservationId en su metadata.");
+            res.status(400).send("Falta reservationId en metadata");
+            return;
+        }
 
         try {
             // A. Buscar la reserva, la sala Y EL USUARIO (para saber a quién mandarle correo)
@@ -37,13 +43,22 @@ export const handleStripeWebhook = async (req: Request, res: Response): Promise<
                 }
             });
 
+            
+
             const taxtRate = reservation?.room.location.taxRate ? Number(reservation.room.location.taxRate) : 0.16;
             const porcentajeIva = taxtRate * 100;
 
-            if(!reservation || reservation.status === ReservationStatus.PAID) {
+            if(!reservation) {
+                console.error(`❌ ERROR: No se encontró la reserva con ID ${reservationId} en la base de datos.`);
                 res.json({received: true});
                 return;
             }
+
+            if (reservation.status === ReservationStatus.PAID) {
+            console.log(`⚠️ La reserva ${reservationId} ya estaba marcada como pagada.`);
+            res.json({received: true});
+            return;
+        }
             // B. GENERAR CÓDIGO DE ACCESO (TTLock)
             let accessCode = null;
             if (reservation.room.ttlock_lock_id) {
