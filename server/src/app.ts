@@ -10,7 +10,7 @@ import { adminRoutes, userRoutes } from './routes/user.routes';
 import webhookRoutes from './routes/webhook.routes'
 import financialrouter from './routes/financial.routes';
 import reservationRoutes from './routes/reservation.routes';
-import { cancelReservation } from './controllers/cancellation_controller';
+import cancellationRoutes from './routes/cancellation.routes'
 
 const app: Application = express();
 
@@ -40,7 +40,7 @@ app.use('/api/reservations', reservationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/user', userRoutes); 
 app.use('/api/admin/financial', financialrouter);
-app.use("/api/cancellations", cancelReservation);
+app.use("/api/cancellations", cancellationRoutes);
 
 
 export default app;
