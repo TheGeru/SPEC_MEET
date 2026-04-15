@@ -109,7 +109,7 @@ export interface RoomData {
   wifi_pass: string;
   capacity: number;
   status: string;
-  ttlock_lock_id: string | null;
+  ttlock_lock_id?: string | null;
   amenities: string[];
   locationId: number;
   createdAt: string;

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   DollarSignIcon,AlertTriangleIcon, ArrowUpIcon, ArrowDownIcon,
   CalendarIcon, SaveIcon, RefreshCwIcon, Loader2, CheckCircleIcon,
-  Calculator, X, HelpCircle
+  Calculator, ArrowLeftIcon,X, HelpCircle
 } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, 
@@ -20,7 +21,7 @@ interface RealMetrics {
 }
 
 const AdminFinancial: React.FC = () => {
-
+  const navigate = useNavigate();
   // ── Estados del simulador ──────────────────────────────────
   const [initialInvestment, setInitialInvestment]           = useState(150000);
   const [monthlyExpenses, setMonthlyExpenses]               = useState(8000);
@@ -241,6 +242,15 @@ const AdminFinancial: React.FC = () => {
 
       {/* ── Header ─────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+        {/* 🚀 Lado Izquierdo: Botón Atrás + Títulos */}
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate('/admin')} 
+            className="p-2 bg-zinc-800/50 border border-zinc-700 text-gray-400 rounded-lg hover:bg-zinc-700 hover:text-white transition-all shadow-sm shrink-0"
+            title="Volver al panel principal"
+          >
+            <ArrowLeftIcon className="w-5 h-5" />
+          </button>
         <div>
           <h1 className="text-3xl font-bold text-white">
             Simulador Financiero
@@ -704,7 +714,8 @@ const AdminFinancial: React.FC = () => {
               <Tooltip 
                 contentStyle={{ backgroundColor: '#27272a', border: '1px solid #3f3f46', borderRadius: '8px' }}
                 labelStyle={{ color: '#e5e7eb' }}
-                formatter={(value: number) => `$${value.toLocaleString()}`}
+                itemStyle={{ color: '#10b981' }}
+                formatter={(value: any) => [`$${Number(value).toLocaleString()}`, ""]}
               />
               <Legend />
               <Line 
@@ -992,6 +1003,7 @@ const AdminFinancial: React.FC = () => {
         </div>
       )}
     </div>
+  </div>
   );
 };
 

@@ -18,7 +18,17 @@ interface PlansModalProps {
   onClose: () => void;
 }
 
-const PLANS = [
+interface Plan {
+  id: number;
+  name: string;
+  hours: number;
+  price: number;
+  pricePerHour: number;
+  discount: number;
+  popular?: boolean; // El "?" significa que es opcional
+}
+
+const PLANS: Plan[] = [
   {
     id: 1,
     name: "Plan Básico",
@@ -26,6 +36,7 @@ const PLANS = [
     price: 200,
     pricePerHour: 200,
     discount: 0,
+    popular: false,
   },
   {
     id: 2,

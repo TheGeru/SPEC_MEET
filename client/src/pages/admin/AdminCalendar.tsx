@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; // 🚀 Nuevo
-import { ClockIcon, UserIcon, XCircleIcon, ArrowLeftIcon,LockIcon, UnlockIcon, Loader, Calendar as CalendarIcon } from 'lucide-react';
+import { ClockIcon, XCircleIcon, ArrowLeftIcon,LockIcon, UnlockIcon, Loader} from 'lucide-react';
 import api from '../../api/axios';
 
 interface CalendarReservation {
