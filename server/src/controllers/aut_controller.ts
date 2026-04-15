@@ -151,7 +151,7 @@ export const forgotPassowrd = async (req: Request, res: Response): Promise<void>
             }
         });
 
-        const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+        const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
         const htmlContent = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
                 <h2 style="color: #4F46E5; text-align: center;">Recuperación de Contraseña</h2>
