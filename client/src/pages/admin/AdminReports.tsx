@@ -433,7 +433,7 @@ const AdminReports: React.FC = () => {
         <div className="bg-zinc-800 rounded-lg p-6">
           <h3 className="text-lg font-medium text-white mb-4">Horas Pico</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {occupancyData.peakHours.map((item, index) => <div key={item.time} className="bg-zinc-900 p-4 rounded-lg">
+            {occupancyData.peakHours.map((item) => <div key={item.time} className="bg-zinc-900 p-4 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-sm font-medium text-white">
                     {item.time}

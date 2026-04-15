@@ -314,12 +314,24 @@ export function useAdminSettings(): UseAdminSettingsReturn {
   };
 
   // ── Room CRUD ────────────────────────────────────────────────
-  const createNewRoom = async (data: { name: string; capacity: number; wifi_ssid: string; wifi_pass: string; status: string; amenities: string[] }) => {
+const createNewRoom = async (data: { 
+    name: string; 
+    capacity: number; 
+    wifi_ssid: string; 
+    wifi_pass: string; 
+    status: string; 
+    amenities: string[];
+    ttlock_lock_id?: string | null; // 1. Aquí ya está bien
+  }) => {
     if (!businessConfig) throw new Error("BusinessConfig must exist before creating rooms");
+
     const created = await createRoom({
       ...data,
       locationId: businessConfig.id,
+      // 2. AGREGA ESTA LÍNEA AQUÍ ABAJO:
+      ttlock_lock_id: data.ttlock_lock_id ?? null, 
     });
+
     setRoomsFull((prev) => [...prev, created]);
     setRooms((prev) => [...prev, { id: created.id, name: created.name }]);
     if (!selectedRoomId) setSelectedRoomId(created.id);
