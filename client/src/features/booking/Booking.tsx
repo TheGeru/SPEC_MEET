@@ -101,8 +101,11 @@ const renderDateStep = () => (
           onSelectDate={flow.setSelectedDate}
           myBookedDates={availability.myBookedDates}
           hasDayReservations={availability.hasDayReservations}
+          isDayFullyOccupied={availability.isDayFullyOccupied}
           isPlanFlow={isPlanFlow}
           selectedDuration={selectedDuration}
+          planStartTime={flow.selectedScheduleOption?.startTime}
+          planEndTime={flow.selectedScheduleOption?.endTime}
           isDayValidForPlan={isPlanFlow ? isDayValidForPlan : () => true} 
           businessConfig={availability.businessConfig}
         />
@@ -160,8 +163,24 @@ const renderDateStep = () => (
             />
           </div>
         )}
-
-        <div>
+        {/* Horario fijo del plan — solo en plan flow */}
+          {isPlanFlow && flow.selectedScheduleOption && (
+            <div className="p-4 bg-white/10 rounded-xl border border-white/20">
+              <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">
+                Horario del plan
+              </p>
+              <p className="text-white font-bold text-lg">
+                {flow.selectedScheduleOption.startTime} — {flow.selectedScheduleOption.endTime}
+              </p>
+              <p className="text-gray-400 text-sm mt-1">
+                Este horario es fijo según el plan seleccionado.
+              </p>
+            </div>
+          )}
+          
+        {/*TimeSlotPicker - solo en flujjo normal */}
+        {!isPlanFlow && (
+          <div>
           <h3 className="text-lg font-medium text-white mb-4">
             Horarios Disponibles para {formatDate(flow.selectedDate)}
           </h3>
@@ -184,6 +203,7 @@ const renderDateStep = () => (
             </p>
           )}
         </div>
+        )}
 
         {flow.summary && (
           <div className="mt-auto">

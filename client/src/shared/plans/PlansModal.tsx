@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { XIcon, Loader2 } from 'lucide-react';
 import { fetchPublicPlans } from './public-plans.service';
@@ -11,6 +12,13 @@ interface PlansModalProps {
 }
 
 const PlansModal: React.FC<PlansModalProps> = ({ isOpen, onClose }) => {
+  const navigate = useNavigate();
+  
+  const handleSelect = (plan: PublicPackageData) => { // ← agregar
+    onClose();
+    navigate('/booking', { state: { selectedPlan: plan } });
+  };
+
   const [plans, setPlans] = useState<PublicPackageData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -114,13 +122,11 @@ const PlansModal: React.FC<PlansModalProps> = ({ isOpen, onClose }) => {
                         </div>
                       </div>
 
-                      <Link 
-                        to={`/booking?planId=${plan.id}&roomId=${plan.roomId}`} 
-                        onClick={onClose}
-                        className={`block w-full py-2.5 px-4 rounded-lg text-center font-bold text-sm transition-colors mt-auto ${btnStyle}`}
-                      >
+                      <button 
+                        onClick={() => handleSelect(plan)}
+                        className={`block w-full py-2.5 px-4 rounded-lg text-center font-bold text-sm transition-colors mt-auto ${btnStyle}`}>
                         Seleccionar
-                      </Link>
+                      </button>
                     </div>
                   );
                 })}

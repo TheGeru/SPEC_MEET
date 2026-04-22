@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@infrastructure/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import {
   CalendarIcon, ClockIcon, KeyIcon, CheckCircleIcon,
   XCircleIcon, AlertCircleIcon, TagIcon, Loader2,
@@ -9,6 +10,7 @@ import {
 import api from '../../api/axios';
 import ExtensionPaymentModal from '@features/booking/components/ExtensionPaymentModal';
 
+const navigate = useNavigate()
 // ─── Tipos ───────────────────────────────────────────────────
 interface Reservation {
   id:           string;
@@ -451,12 +453,13 @@ const UserDashboard: React.FC = () => {
                       <CalendarIcon className="h-3 w-3" /> 
                       Vence: {new Date(discount.expiresAt).toLocaleDateString()}
                     </span>
-                    <Link 
-                      to="/booking" 
-                      className="text-[10px] font-bold text-white hover:underline uppercase tracking-tighter"
-                    >
+                    <button 
+                      onClick={() => navigate('/booking', {
+                        state: {preselectedDiscountId: discount.id}
+                      })}
+                      className="text-[10px] font-bold text-white hover:underline uppercase tracking-tighter">
                       Usar ahora →
-                    </Link>
+                    </button>
                   </div>
                 </div>
               ))}

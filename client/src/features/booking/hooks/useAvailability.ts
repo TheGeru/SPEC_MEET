@@ -32,23 +32,19 @@ interface UseAvailabilityProps {
 }
 
 interface UseAvailabilityReturn {
-  // Room
   rooms: Room[];
   isLoadingRoom: boolean;
-
   // Reservations for selected date
   existingReservations: ExistingReservation[];
-
   // My bookings (for calendar highlighting)
   myBookedDates: string[];
-
   // Time slot logic
   getAvailableTimeSlots: (date: string) => string[];
   isSlotAvailable: (date: string, time: string, duration: number) => boolean;
   hasDayReservations: (day: Date) => boolean;
-  isDayValidForPlan: (dateStr: string, requiredHours: number) => boolean;
+  isDayFullyOccupied: (dateStr: string, duration: number) => boolean;
+  isDayValidForPlan: (dateStr: string, startTime: string, endTime: string) => boolean;
   businessConfig: any;
-  // Refresh
   refreshAvailability: (date: string) => Promise<void>;
   refreshMyBookings: () => Promise<void>;
 }
@@ -56,9 +52,7 @@ interface UseAvailabilityReturn {
 export const useAvailability = ({roomId}: UseAvailabilityProps): UseAvailabilityReturn => {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [isLoadingRoom, setIsLoadingRoom] = useState(true);
-  const [existingReservations, setExistingReservations] = useState<
-    ExistingReservation[]
-  >([]);
+  const [existingReservations, setExistingReservations] = useState<ExistingReservation[]>([]);
   const [myBookedDates, setMyBookedDates] = useState<string[]>([]);
   const [businessConfig, setBusinessConfig] = useState<any>(null);
 
@@ -116,40 +110,31 @@ export const useAvailability = ({roomId}: UseAvailabilityProps): UseAvailability
 
   // ── Generate time slots for a given date ────────────────────
   const getAvailableTimeSlots = (date: string): string[] => {
-    const slots: string[] = [];
-    let hour = BOOKING_CONFIG.OPERATION_START_HOUR;
-    const endHour = BOOKING_CONFIG.OPERATION_END_HOUR;
+    if(!date) return [];
 
-    while (hour < endHour) {
-      slots.push(`${hour.toString().padStart(2, "0")}:00`);
-      slots.push(`${hour.toString().padStart(2, "0")}:30`);
-      hour++;
-    }
-    slots.push(`${endHour}:00`);
-
-    if (!date) return slots;
-
-    // Filter out past time slots if date is today
     const now = new Date();
-    const selectedDateObj = new Date(`${date}T12:00:00`);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const checkDate = new Date(selectedDateObj);
-    checkDate.setHours(0, 0, 0, 0);
+    const today = new Date(); today.setHours(0,0,0,0);
+    const checkDate = new Date(`${date}T12:00:00`); checkDate.setHours(0,0,0,0);
 
-    if(checkDate < today) return [];
+    if(checkDate < today) return[];
 
-    if (checkDate.getTime() === today.getTime()) {
+    const slots: string[] = [];
+    const startH = BOOKING_CONFIG.OPERATION_START_HOUR;
+    const endH =BOOKING_CONFIG.OPERATION_END_HOUR;
 
-      return slots.filter((slot) => {
-        const [slotHour, slotMin] = slot.split(":").map(Number);
-        if (slotHour > now.getHours()) return true;
-        if (slotHour === now.getHours() && slotMin > now.getMinutes()) return true;
+    for(let h = startH; h < endH; h++){
+      slots.push(`${String(h).padStart(2, "0")}:00`);
+      slots.push(`${String(h).padStart(2, "0")}:30`)
+    }
+
+    if(checkDate.getTime() === today.getTime()){
+      return slots.filter(slot => {
+        const [h, m] = slot.split(":").map(Number);
+        if(h > now.getHours()) return true;
+        if(h === now.getHours() && m > now.getMinutes())return true;
         return false;
       });
     }
-
     return slots;
   };
 
@@ -163,11 +148,10 @@ export const useAvailability = ({roomId}: UseAvailabilityProps): UseAvailability
 
     // 1. REGLA DE ORO (El límite de la cancha): 
     // La reserva en sí misma NO puede terminar después del cierre
-    const closingTime = new Date(`${dateStr}T${String(BOOKING_CONFIG.OPERATION_END_HOUR).padStart(2, '0')}:00:00`);
+    const closingTime = new Date(
+      `${dateStr}T${String(BOOKING_CONFIG.OPERATION_END_HOUR).padStart(2, '0')}:00:00`);
     
-    if (proposedEnd.getTime() > closingTime.getTime()) {
-      return false; // Si termina después del cierre, bloqueamos.
-    }
+    if (proposedEnd > closingTime) return false;
 
     // Si pasamos el filtro del cierre y no hay reservas previas, la cancha es libre
     if (existingReservations.length === 0) return true;
@@ -175,38 +159,40 @@ export const useAvailability = ({roomId}: UseAvailabilityProps): UseAvailability
     // 2. REVISIÓN DE CHOQUES (Los defensas con buffer):
     const cleaningBufferMs = BOOKING_CONFIG.CLEANING_BUFFER_MINUTES * 60 * 1000;
 
-    return !existingReservations.some((reservation) => {
-      const start = reservation.start instanceof Date ? reservation.start : new Date(reservation.start);
-      const end = reservation.end instanceof Date ? reservation.end : new Date(reservation.end);
-
-      // Expandimos la "sombra" de la reserva existente para incluir limpieza
-      const buffer = reservation.type === 'MAINTENANCE' ? 0 : cleaningBufferMs;
+    return !existingReservations.some(r => {
+      const start = r.start instanceof Date ? r.start : new Date(r.start);
+      const end = r.end instanceof Date ? r.end : new Date(r.end);
+      const buffer = r.type === 'MAINTENANCE' ? 0 : cleaningBufferMs;
       const busyStart = start.getTime() - buffer;
       const busyEnd = end.getTime() + buffer;
-        
       return (
         proposedStart.getTime() < busyEnd && 
         proposedEnd.getTime() > busyStart
       );
     });
   };
-  
 
-    // Esta función debe verificar si existe AL MENOS un espacio donde quepa el plan completo
-    const isDayValidForPlan = (dateStr: string, requiredHours: number): boolean => {
-      //console.log(`\n📅 3. EVALUANDO DÍA: ${dateStr} para ${requiredHours} horas`);
-      const slots = getAvailableTimeSlots(dateStr);
-      //console.log(`🕒 4. Slots generados para el día:`, slots.length > 0 ? slots : "NINGUNO (Día bloqueado por getAvailableTimeSlots)");
-      return slots.some(slot => isSlotAvailable(dateStr, slot, requiredHours))
-    };
+  const isDayFullyOccupied = (dateStr: string, duration: number): boolean => {
+    const slots = getAvailableTimeSlots(dateStr);
+    if (slots.length === 0) return true;
+    return !slots.some(slot => isSlotAvailable(dateStr, slot, duration));
+  };
+
+  // Esta función debe verificar si existe AL MENOS un espacio donde quepa el plan completo
+  const isDayValidForPlan = (dateStr: string, startTime: string, endTime: string): boolean => {
+    const start = new Date(`${dateStr}T${startTime}:00`);
+    const end = new Date(`${dateStr}T${endTime}:00`);
+    const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
+
+    //verificamos el bloque exacto del plan
+    return isSlotAvailable(dateStr, startTime, durationHours);
+  };
   // ── Check if a calendar day has any reservations ────────────
   const hasDayReservations = (day: Date): boolean => {
     const calendarStr = day.toISOString().split("T")[0];
     return existingReservations.some((r) => {
-        console.log("🔍 r.start vale:", r.start, "tipo:", typeof r.start);
-        const startDate = r.start instanceof Date ? r.start : new Date(r.start);
-        const reservationDateStr = startDate.toISOString().split("T")[0];
-        return reservationDateStr === calendarStr;
+      const start = r.start instanceof Date ? r.start : new Date(r.start);
+      return start.toISOString().split("T")[0] === calendarStr;
     });
   };
 
@@ -218,6 +204,7 @@ export const useAvailability = ({roomId}: UseAvailabilityProps): UseAvailability
     getAvailableTimeSlots,
     isSlotAvailable,
     hasDayReservations,
+    isDayFullyOccupied,
     refreshAvailability,
     refreshMyBookings,
     isDayValidForPlan,

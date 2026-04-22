@@ -44,6 +44,7 @@ interface UseBookingFlowReturn {
 
   selectedRoom: Room | null;
   // Selection state
+  selectedScheduleOption: { startTime: string; endTime: string; label: string; } | null;
   roomId: string;
   selectedDate: string;
   setSelectedDate: (date: string) => void;
@@ -71,6 +72,7 @@ interface UseBookingFlowReturn {
 }
 
 export const useBookingFlow = (): UseBookingFlowReturn => {
+  
   const location = useLocation();
   const [activePlan] = useState<PublicPackageData | null>(location.state?.selectedPlan || null)
   const isPlanFlow = !!activePlan;
@@ -82,23 +84,37 @@ export const useBookingFlow = (): UseBookingFlowReturn => {
   const [taxRate, setTaxRate] = useState(0.16);
 
   const [myDiscounts, setMyDiscounts] = useState<any[]>([]);
-  const [selectedDiscountId, setSelectedDiscountId] = useState<string | null>(null);
+  const preselectedDiscountId = location.state?.preselectedDiscountId || null;
+  const [selectedDiscountId, setSelectedDiscountId] = useState<string | null>(
+  preselectedDiscountId
+  );
   const activeDiscount = myDiscounts.find(d => d.id === selectedDiscountId) || null;
   const [selectedDate, setSelectedDate] = useState("");
+  const planScheduleOptions = activePlan?.metadata?.schedule?.options || [];
+
+  const [selectedScheduleOption, setSelectedScheduleOption] = useState<{
+  startTime: string; endTime: string; label: string;
+  } | null>(planScheduleOptions.length > 0 ? planScheduleOptions[0] : null);
+
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(
-    activePlan ? "08:00" : ""
+  selectedScheduleOption ? selectedScheduleOption.startTime: ""  
   );
   // Reemplaza tu const [selectedDuration, ...] por esto:
   const [selectedDuration, setSelectedDuration] = useState(() => {
-  if (activePlan) {
+  if (selectedScheduleOption) {
+    const [sh, sm] = selectedScheduleOption.startTime.split(":").map(Number);
+    const [eh, em] = selectedScheduleOption.endTime.split(":").map(Number);
+    return (eh * 60 + em - (sh * 60 + sm)) / 60;
+  }
+  if (activePlan){
     const raw = activePlan.minDuration || activePlan.metadata?.blockHours || 1;
-    return raw > 24 ? raw / 60 : raw;
+    return raw > 24 ? raw / 60: raw;
   }
   return 1; 
 });
 
-  console.log("🔥 1. PLAN RECIBIDO EN HOOK:", activePlan?.name || "NINGUNO");
-  console.log("⏱️ 2. DURACIÓN CALCULADA:", selectedDuration, "tipo:", typeof selectedDuration);
+  //console.log("🔥 1. PLAN RECIBIDO EN HOOK:", activePlan?.name || "NINGUNO");
+  //console.log("⏱️ 2. DURACIÓN CALCULADA:", selectedDuration, "tipo:", typeof selectedDuration);
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
 
@@ -151,7 +167,7 @@ export const useBookingFlow = (): UseBookingFlowReturn => {
     ? Number(selectedRoom.baseRates[0].hourlyRate)
     : BOOKING_CONFIG.PRICE_PER_HOUR_FALLBACK;
 
-const summary: BookingSummary | null =
+    const summary: BookingSummary | null =
     selectedDate && selectedTimeSlot && selectedRoom
       ? (() => {
           const activeDiscount = myDiscounts.find(d => d.id === selectedDiscountId);
@@ -226,19 +242,18 @@ const goToPayment = async () => {
     try {
       // 🚀 SOLUCIÓN AL DESFASE: Construimos la fecha manualmente para evitar el salto de UTC
       // En lugar de .toISOString(), enviamos el formato YYYY-MM-DDTHH:mm:ss
-      const startISO = `${selectedDate}T${selectedTimeSlot}:00`;
-      
-      // Calculamos el fin sumando las horas a la fecha inicial
-      const startDate = new Date(`${selectedDate}T${selectedTimeSlot}:00`);
-      const endDate = new Date(startDate.getTime() + (selectedDuration * 60 * 60 * 1000));
-      
-      // Formateamos el fin manualmente para mantenerlo local
-      const endISO = endDate.getFullYear() + "-" + 
-                     String(endDate.getMonth() + 1).padStart(2, '0') + "-" + 
-                     String(endDate.getDate()).padStart(2, '0') + "T" + 
-                     String(endDate.getHours()).padStart(2, '0') + ":" + 
-                     String(endDate.getMinutes()).padStart(2, '0') + ":00";
+     const startISO = `${selectedDate}T${selectedTimeSlot}:00`;
 
+      let endISO: string;
+      if (isPlanFlow && selectedScheduleOption) {
+        endISO = `${selectedDate}T${selectedScheduleOption.endTime}:00`;
+      } else {
+        const endDate = new Date(
+          new Date(`${selectedDate}T${selectedTimeSlot}:00`).getTime() +
+          selectedDuration * 60 * 60 * 1000
+        );
+        endISO = `${endDate.getFullYear()}-${String(endDate.getMonth()+1).padStart(2,"0")}-${String(endDate.getDate()).padStart(2,"0")}T${String(endDate.getHours()).padStart(2,"0")}:${String(endDate.getMinutes()).padStart(2,"0")}:00`;
+      }
       console.log("Enviando a Backend:", { startISO, endISO, duration: selectedDuration });
 
       const result = await createReservation({
@@ -298,6 +313,7 @@ const goToPayment = async () => {
 
     selectedRoom,
 
+    selectedScheduleOption,
     roomId: selectedRoom?.id ?? "",
     selectedDate,
     setSelectedDate,

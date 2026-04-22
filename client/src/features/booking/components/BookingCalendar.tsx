@@ -14,9 +14,12 @@ interface BookingCalendarProps {
   myBookedDates: string[];
   onSelectDate: (dateStr: string) => void;
   hasDayReservations: (day: Date) => boolean;
+  isDayFullyOccupied: (dateStr: string, duration: number) => boolean;
   isPlanFlow: boolean;
   selectedDuration: number;
-  isDayValidForPlan: (dateStr: string, requiredHours: number) => boolean;
+  planStartTime?: string;
+  planEndTime?: string
+  isDayValidForPlan: (dateStr: string, startTime: string, endTime: string) => boolean;
   businessConfig?: any;
 }
 
@@ -27,8 +30,11 @@ export default function BookingCalendar({
   myBookedDates,
   onSelectDate,
   hasDayReservations,
+  isDayFullyOccupied,
   isPlanFlow,
   selectedDuration,
+  planStartTime,
+  planEndTime,
   isDayValidForPlan,
   businessConfig,
 }: BookingCalendarProps) {
@@ -130,14 +136,19 @@ export default function BookingCalendar({
           const dateString = day.toISOString().split("T")[0];
 
           const isPast = day < today;
-          let isPlanInvalid = false;
+          const closedByAdmin = isDayClosed(day)
 
-          if(isPlanFlow && selectedDuration > 0){
-            isPlanInvalid = !isDayValidForPlan(dateString, selectedDuration);
+          let isFullyOccupied = false;
+          let isPlanInvalid = false;
+          
+
+          if(isPlanFlow && planStartTime && planEndTime){
+            isPlanInvalid = !isDayValidForPlan(dateString, planStartTime, planEndTime);
+          } else {
+              isFullyOccupied = isDayFullyOccupied(dateString, selectedDuration);
           }
 
-          const closedByAdmin = isDayClosed(day)
-          const isDisabled = isPast || isPlanInvalid || closedByAdmin;
+          const isDisabled = isPast || isPlanInvalid || closedByAdmin || isFullyOccupied;
 
           const isSelected = dateString === selectedDate;
           const isToday =
@@ -150,13 +161,17 @@ export default function BookingCalendar({
           return (
             <div
               key={day.toString()}
-              className={`h-20 p-1 rounded-md overflow-hidden cursor-pointer relative border transition-all
-                ${isDisabled 
-                  ? "opacity-20 grayscale pointer-events-none cursor-not-allowed" 
-                  : "cursor-pointer hover:bg-white hover:bg-opacity-15"}
-                ${isSelected ? "bg-white bg-opacity-30 border-white border-opacity-50" : ""}
-                ${isToday && !isSelected ? "bg-white bg-opacity-10 border-blue-400 border-opacity-50" : ""}
-                ${!isSelected && !isToday && !isDisabled ? "bg-white bg-opacity-5 border-transparent" : ""}
+              className={`h-20 p-1 rounded-md overflow-hidden relative border transition-all
+                ${isFullyOccupied && !isPast && !closedByAdmin
+                  ? "bg-red-900/30 border-red-500/40 cursor-not-allowed pointer-events-none"
+                  : isDisabled
+                  ? "opacity-20 grayscale pointer-events-none cursor-not-allowed"
+                  : isSelected
+                  ? "bg-white bg-opacity-30 border-white border-opacity-50 cursor-pointer"
+                  : isToday && !isSelected
+                  ? "bg-white bg-opacity-10 border-blue-400 border-opacity-50 cursor-pointer"
+                  : "bg-white bg-opacity-5 border-transparent cursor-pointer hover:bg-white hover:bg-opacity-15"
+                }
               `}
               onClick={() => !isDisabled && onSelectDate(dateString)}
             >
@@ -171,6 +186,11 @@ export default function BookingCalendar({
                 {isMyBooking && (
                   <div className="px-1.5 py-0.5 text-[10px] bg-blue-500 text-white rounded shadow-sm font-medium w-full truncate">
                     Mi Reserva
+                  </div>
+                )}
+                {isFullyOccupied && !isPast && !closedByAdmin && (
+                  <div className="w-full px-1 py-0.5 text-[9px] bg-red-500/60 text-white rounded text-center font-bold">
+                    OCUPADO
                   </div>
                 )}
                 {hasReservations && !isMyBooking && (
