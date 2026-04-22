@@ -4,12 +4,12 @@ import { google } from 'googleapis';
 const SCOPES = ['https://www.googleapis.com/auth/calendar.events'];
 
 // Inicializamos la autenticación de nuestro "Empleado Virtual" (Bot)
-const auth = new google.auth.GoogleAuth({
+/* const auth = new google.auth.GoogleAuth({
     credentials: JSON.parse(process.env.GOOGLE_CALENDAR_CREDENTIALS as string),
     scopes: SCOPES,
-});
+}); */
 
-const calendar = google.calendar({ version: 'v3', auth });
+/* const calendar = google.calendar({ version: 'v3', auth }); */
 
 // 👇 AQUÍ PON EL CORREO DEL CALENDARIO AL QUE EL BOT LE DIÓ PERMISOS
 const CALENDAR_ID = 'spec.meet@gmail.com'; 

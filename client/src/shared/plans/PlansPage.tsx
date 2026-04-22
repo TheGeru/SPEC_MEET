@@ -38,11 +38,11 @@ const PlansPage: React.FC = () => {
     loadPlans();
   }, []);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-black"><Loader2 className="animate-spin h-8 w-8 text-white" /></div>;
-  if (error) return <div className="min-h-screen flex items-center justify-center bg-black text-red-500">{error}</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center "><Loader2 className="animate-spin h-8 w-8 text-background" /></div>;
+  if (error) return <div className="min-h-screen flex items-center justify-center  text-red-500">{error}</div>;
 
   return (
-    <div className="w-full min-h-screen font-sans">
+    <div className="w-full min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         
         {/* TU HEADER ORIGINAL */}
@@ -72,23 +72,23 @@ const PlansPage: React.FC = () => {
             const baseRate = discountPct > 0 ? effectiveRate / (1 - discountPct / 100) : effectiveRate;
             const savings = (baseRate * blockHours) - plan.price;
 
-            const borderColor = isHourly ? "border-gray-100" : "border-[#9A7B4F] border-1";
+            const borderColor = isHourly ? "border-gray-100" : "border-background border-1";
             const btnStyle = isHourly 
               ? "bg-white bg-opacity-5 border-transparent text-white hover:bg-white hover:bg-opacity-15" 
-              : "bg-[#9A7B4F] text-white hover:bg-[#8e7149]";
+              : "bg-background text-white hover:bg-[#1f1d1a]";
 
             return (
               <div key={plan.id} className={`bg-black bg-opacity-40 backdrop-blur-sm rounded-lg shadow-lg  relative flex flex-col p-8 ${borderColor}`}>
                 
                 {/* Badge Descuento (Top Right) */}
                 {!isHourly && discountPct > 0 && (
-                  <div className="absolute -top-3 -right-3 bg-[#9A7B4F] text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md">
+                  <div className="absolute -top-3 -right-3 bg-background text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md">
                     -{discountPct}%
                   </div>
                 )}
 
                 {/* Cabecera */}
-                <h3 className="text-2xl font-serif font-bold text-white mb-3">{plan.name}</h3>
+                <h3 className="text-2xl font-bold text-white mb-3">{plan.name}</h3>
                 <p className="text-sm text-gray-200 mb-6 min-h-[40px]">
                   {plan.description || "Reserva el tiempo que necesites."}
                 </p>
@@ -104,7 +104,7 @@ const PlansPage: React.FC = () => {
                 </div>
 
                 {/* Subtexto Dorado */}
-                <div className="text-[13px] text-[#9A7B4F] mb-6 pb-6 border-b border-gray-200">
+                <div className="text-[13px] text-white mb-6 pb-6 border-b border-gray-200">
                   {isHourly ? (
                     "Tarifa base · Sin descuento"
                   ) : (
@@ -139,13 +139,13 @@ const PlansPage: React.FC = () => {
                   {!isHourly && scheduleOptions.length > 0 && (
                     <div className="space-y-3 mt-6">
                       {scheduleOptions.map((opt: any, idx: number) => {
-                        const dotColor = opt.label.toLowerCase() === "mañana" ? "bg-amber-400" : 
-                                         opt.label.toLowerCase() === "tarde" ? "bg-purple-500" : "bg-emerald-500";
+                        const dotColor = opt.label.toLowerCase() === "mañana" ? "bg-emerald-500" : 
+                                         opt.label.toLowerCase() === "tarde" ? "bg-emerald-500" : "bg-emerald-500";
                         return (
-                          <div key={idx} className="flex items-center bg-[#f7f7f7] rounded-md p-3">
+                          <div key={idx} className="flex items-center bg-white bg-opacity-5 backdrop-blur-sm rounded-md p-3">
                             <span className={`w-2 h-2 rounded-full mr-3 shrink-0 ${dotColor}`}></span>
                             <span className="text-sm font-bold text-white w-24">{opt.label}</span>
-                            <span className="text-sm text-gray-300">{opt.startTime} – {opt.endTime}</span>
+                            <span className="text-sm text-white">{opt.startTime} – {opt.endTime}</span>
                           </div>
                         );
                       })}
@@ -158,7 +158,7 @@ const PlansPage: React.FC = () => {
                 onClick={() => handleSelectPlan(plan)}
                 className={`block w-full py-3.5 px-4 rounded-lg text-center font-bold text-sm transition-colors mt-auto ${btnStyle}`}
                 >
-                  {isHourly ? "Reservar" : `Reservar ${plan.name.replace("Plan ", "")}`}
+                  {isHourly ? "Reservar" : `Reservar`}
                 </button>
               </div>
             );

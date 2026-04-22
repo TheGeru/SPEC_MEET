@@ -94,8 +94,6 @@ export const businessConfigSchema = z.object({
 
 // 2. Terms & Conditions
 export const termsConfigSchema = z.object({
-  version: z.string().min(1, "La versión es requerida"),
-  isActive: z.boolean().default(false),
   templateContent: z.string().min(10, "La plantilla no puede estar vacía"), // 🔧 Corregido
   additionalClauses: z.string().nullable().optional(),
   privacyOptions: z.object({

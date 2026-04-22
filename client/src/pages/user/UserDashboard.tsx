@@ -372,8 +372,8 @@ const UserDashboard: React.FC = () => {
 
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-black">Mi Panel</h1>
-          <p className="text-black mt-2">
+          <h1 className="text-3xl font-bold text-white">Mi Panel</h1>
+          <p className="text-white mt-2">
             Bienvenido, {user?.name}. Gestiona tus reservas desde aquí.
           </p>
         </div>

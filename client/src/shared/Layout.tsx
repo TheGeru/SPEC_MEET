@@ -14,6 +14,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const pagesWithImageBackground = ['/', '/booking', '/dashboard','/login','/register','/plans'];
   const hasImageBackground = pagesWithImageBackground.includes(location.pathname);
 
+  //Página con fondo blanco
+  const pagesWithWhiteBackground = ['/terms-and-conditions'];
+  const hasWhiteBackground = pagesWithWhiteBackground.includes(location.pathname);
+
   //Paginas sin Footer
   const pagesWithoutFooter = ['/booking','/dashboard'];
   const hasFooter = !pagesWithoutFooter.includes(location.pathname);
@@ -37,10 +41,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       )}*/}
       
       {/* Fondo Negro para páginas admin */}
-      {!hasImageBackground && (
+      {!hasImageBackground && !hasWhiteBackground && (
         <div className="fixed inset-0 bg-black z-0" />
       )}
-      
+
+      {/* Fondo Blanco para páginas específicas */}
+      {hasWhiteBackground && (
+        <div className="fixed inset-0 bg-white z-0" />
+      )}
+
       {/* Contenido (relativo al fondo) */}
       <div className="relative z-10 flex flex-col min-h-screen">
         <Navbar />
