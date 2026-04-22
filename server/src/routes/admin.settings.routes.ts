@@ -24,11 +24,11 @@ const router = Router();
 // ==========================================
 
 // Configuración de Negocio
-router.get('/business', authenticateToken, authorizeAdmin, getBusinessConfig);
+router.get('/business', getBusinessConfig);
 router.put('/business', authenticateToken, authorizeAdmin, validateSchema(businessConfigSchema), updateBusinessConfig);
 
 // Términos
-router.get('/terms', authenticateToken, authorizeAdmin, getTermsSettings);
+router.get('/terms', getTermsSettings);
 router.put('/terms', authenticateToken, authorizeAdmin, validateSchema(termsConfigSchema), updateTermsSettings);
 
 // Wi-Fi
@@ -43,7 +43,7 @@ router.patch('/packages/:id/toggle', authenticateToken, authorizeAdmin, togglePa
 router.delete('/packages/:id', authenticateToken, authorizeAdmin, deletePackage);
 
 // Tarifas (Ahora vivirán en /api/admin/settings/rates)
-router.get('/rates', authenticateToken, authorizeAdmin, getBaseRates);
+router.get('/rates',  getBaseRates);
 router.post('/rates', authenticateToken, authorizeAdmin, validateSchema(roomBaseRateSchema), createBaseRate);
 
 // Bloqueos

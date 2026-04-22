@@ -15,7 +15,7 @@ const routerRoom = Router();
 // RUTAS DE ADMINISTRACIÓN (Protegidas)
 // ==========================================
 // ⚠️ IMPORTANTE: /summary debe ir ANTES de /:id para que express no confunda "summary" con un ID
-routerRoom.get('/summary', authenticateToken, authorizeAdmin, getRoomsSummary);
+routerRoom.get('/summary', getRoomsSummary);
 
 routerRoom.post('/', authenticateToken, authorizeAdmin, createRoom);
 routerRoom.put('/:id', authenticateToken, authorizeAdmin, updateRoom);
