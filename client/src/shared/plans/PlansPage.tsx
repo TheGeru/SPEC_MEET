@@ -38,7 +38,7 @@ const PlansPage: React.FC = () => {
     loadPlans();
   }, []);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center "><Loader2 className="animate-spin h-8 w-8 text-background" /></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center "><Loader2 className="animate-spin h-8 w-8 text-white" /></div>;
   if (error) return <div className="min-h-screen flex items-center justify-center  text-red-500">{error}</div>;
 
   return (

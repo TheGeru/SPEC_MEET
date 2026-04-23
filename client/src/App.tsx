@@ -15,7 +15,7 @@ import {
 import Booking from "@features/booking/Booking";
 import AdminSettings from "@features/admin-settings/AdminSettings";
 import AdminDashboard from "@features/admin-dashboard/AdminDashboard";
-
+import UserDashboard from "@features/user-dashboard/UserDashboard";
 // ─── PAGES (Manteniendo tus carpetas actuales sin cambios) ───
 import Layout from "./shared/Layout";
 import LandingPage from "./pages/LandingPage";
@@ -23,7 +23,7 @@ import FeaturesPage from "./pages/FeaturesPage";
 import GalleryPage from "./pages/GalleryPage";
 import PlansPage from "./shared/plans/PlansPage";
 import TCPage from "./pages/TCPage";
-import UserDashboard from "./pages/user/UserDashboard";
+
 
 // Importamos desde la ruta original que NO moviste
 import AdminFinancial from "./pages/admin/AdminFinancial";
